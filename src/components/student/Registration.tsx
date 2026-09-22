@@ -3,11 +3,12 @@ import { GraduationCap, Info, ArrowRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Student } from "@/lib/api";
 
+// دالة توحيد الاسم وإزالة الفراغات الفاصلة عن الرقمين
 function normalizeStudentName(input: string): string {
   let cleaned = input.trim();
-  // تحويل الأرقام العربية المشرقية إن وجدت إلى أرقام إنجليزية
+  // تحويل الأرقام المشرقية إن وجدت إلى أرقام إنجليزية
   cleaned = cleaned.replace(/[٠-٩]/g, (d) => "0123456789"["٠١٢٣٤٥٦٧٨٩".indexOf(d)]);
-  // إزالة أي مسافة تفصل الاسم عن الرقمين الأخيرين
+  // إزالة أي مسافات قبل الرقمين الأخيرين مباشرة (مثال: "حيدر حميد 98" تصبح "حيدر حميد98")
   cleaned = cleaned.replace(/\s+(\d{2})$/, "$1");
   return cleaned;
 }
@@ -28,29 +29,30 @@ export function Registration({ onRegistered }: { onRegistered: (student: Student
 
     const standardName = normalizeStudentName(name);
 
-    // التحقق من أن الاسم ينتهي برقمين فقط
+    // التحقق من أن الاسم ينتهي برقمين بالضبط
     const endsWithTwoDigits = /\d{2}$/.test(standardName);
     const endsWithThreeDigits = /\d{3}$/.test(standardName);
 
     if (!endsWithTwoDigits || endsWithThreeDigits) {
-      setError("يجب أن ينتهي الاسم برقمين فقط (مثال: محمد احمد65 أو أحمد علي12)");
+      setError("يجب أن ينتهي الاسم برقمين فقط (مثال: حيدر حميد98 أو أحمد علي12)");
       return;
     }
 
     setLoading(true);
 
     try {
-      // 1. البحث عما إذا كان الطالب موجوداً مسبقاً
-      const { data: existing, error: searchErr } = await supabase
+      // البحث بالاسم الموحد أو بالاسم المدخل بدون استخدام maybeSingle المسبب للخطأ
+      const { data: students, error: searchErr } = await supabase
         .from("students")
         .select("*")
-        .or(`display_name.eq."${standardName}",display_name.eq."${name.trim()}"`)
-        .maybeSingle();
+        .in("display_name", [standardName, name.trim()])
+        .limit(1);
 
       if (searchErr) throw searchErr;
 
-      if (existing) {
-        // تحديث وقت آخر نشاط للطالب
+      // إذا كان الطالب موجوداً مسبقاً -> تسجيل دخول فوري
+      if (students && students.length > 0) {
+        const existing = students[0];
         await supabase
           .from("students")
           .update({ last_active_at: new Date().toISOString() })
@@ -60,7 +62,7 @@ export function Registration({ onRegistered }: { onRegistered: (student: Student
         return;
       }
 
-      // 2. إذا لم يكن مسجلاً، يتم إنشاء الحساب تلقائياً
+      // إذا لم يكن موجوداً -> إنشاء حساب جديد بالاسم الموحد
       const { data: newStudent, error: insertErr } = await supabase
         .from("students")
         .insert({ display_name: standardName })
@@ -103,7 +105,7 @@ export function Registration({ onRegistered }: { onRegistered: (student: Student
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="مثال: محمد احمد65"
+                placeholder="مثال: حيدر حميد98"
                 className="w-full px-4 py-3 rounded-lg border border-slate-700 bg-slate-950 text-white placeholder-slate-500 focus:ring-2 focus:ring-teal-500 outline-none transition-shadow text-center text-lg"
                 autoFocus
               />
@@ -112,7 +114,7 @@ export function Registration({ onRegistered }: { onRegistered: (student: Student
             <div className="flex items-start gap-2.5 p-3.5 bg-slate-950/80 rounded-lg border border-slate-800">
               <Info className="w-5 h-5 text-teal-400 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-slate-400 leading-relaxed text-right">
-                اكتب اسمك مع رقمين في النهاية (مثل: <strong>محمد احمد65</strong>). 
+                اكتب اسمك مع رقمين في النهاية (مثل: <strong>حيدر حميد98</strong>). 
                 إذا كان لديك حساب سابق ستدخل فوراً، وإذا كانت هذه أول مرة سيتم إنشاء حسابك تلقائياً.
               </p>
             </div>
