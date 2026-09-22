@@ -33,7 +33,7 @@ export function Registration({ onRegistered }: { onRegistered: (student: Student
     const endsWithThreeDigits = /\d{3}$/.test(standardName);
 
     if (!endsWithTwoDigits || endsWithThreeDigits) {
-      setError("يجب أن ينتهي الاسم برقمين فقط (مثال: محمد احمد 56 أو أحمد علي12)");
+      setError("يجب أن ينتهي الاسم برقمين فقط (مثال: حيدر حميد98 أو أحمد علي12)");
       return;
     }
 
@@ -103,7 +103,7 @@ export function Registration({ onRegistered }: { onRegistered: (student: Student
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="مثال: محمد احمد 65"
+                placeholder="مثال: حيدر حميد98"
                 className="w-full px-4 py-3 rounded-lg border border-slate-700 bg-slate-950 text-white placeholder-slate-500 focus:ring-2 focus:ring-teal-500 outline-none transition-shadow text-center text-lg"
                 autoFocus
               />
@@ -112,7 +112,7 @@ export function Registration({ onRegistered }: { onRegistered: (student: Student
             <div className="flex items-start gap-2.5 p-3.5 bg-slate-950/80 rounded-lg border border-slate-800">
               <Info className="w-5 h-5 text-teal-400 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-slate-400 leading-relaxed text-right">
-                اكتب اسمك مع رقمين في النهاية (مثل: <strong>محمد احمد 65</strong>). 
+                اكتب اسمك مع رقمين في النهاية (مثل: <strong>حيدر حميد98</strong>). 
                 إذا كان لديك حساب سابق ستدخل فوراً، وإذا كانت هذه أول مرة سيتم إنشاء حسابك تلقائياً.
               </p>
             </div>
