@@ -103,7 +103,7 @@ export function Registration({ onRegistered }: { onRegistered: (student: Student
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="مثال: حيدر حميد98"
+                placeholder="مثال: محمد احمد 65"
                 className="w-full px-4 py-3 rounded-lg border border-slate-700 bg-slate-950 text-white placeholder-slate-500 focus:ring-2 focus:ring-teal-500 outline-none transition-shadow text-center text-lg"
                 autoFocus
               />
