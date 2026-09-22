@@ -20,18 +20,16 @@ type View =
 
 function App() {
   const { student, setStudent, setStudentId, logout, loading } = useStudent();
-  const { token, validating } = useAdminToken();
+  const { token, login: setAdminLoginToken, logout: adminLogout, validating } = useAdminToken();
   const [view, setView] = useState<View>({ name: "home" });
   const [adminMode, setAdminMode] = useState(false);
 
-  // Check if URL has #admin hash
   useEffect(() => {
     if (window.location.hash === "#admin") {
       setAdminMode(true);
     }
   }, []);
 
-  // Sync hash changes
   useEffect(() => {
     const onHashChange = () => {
       setAdminMode(window.location.hash === "#admin");
@@ -43,12 +41,23 @@ function App() {
   if (adminMode) {
     if (validating) {
       return (
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center bg-slate-900">
           <span className="w-8 h-8 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
         </div>
       );
     }
-    return <AdminApp token={token} onLogin={(_t) => {}} onLogout={() => setAdminMode(false)} />;
+    return (
+      <AdminApp
+        token={token}
+        onLogin={(t) => {
+          setAdminLoginToken(t);
+        }}
+        onLogout={() => {
+          adminLogout();
+          setAdminMode(false);
+        }}
+      />
+    );
   }
 
   if (loading) {
@@ -71,7 +80,6 @@ function App() {
     );
   }
 
-  // Admin link button (floating, bottom-right)
   const adminLink = (
     <a
       href="#admin"
@@ -88,14 +96,16 @@ function App() {
         <>
           <Home
             student={student}
-            onLogout={() => { logout(); setView({ name: "home" }); }}
+            onLogout={() => {
+              logout();
+              setView({ name: "home" });
+            }}
             onOpenSettings={() => setView({ name: "settings" })}
             onSelectQuiz={(quiz) => setView({ name: "mode-select", quiz })}
           />
           {adminLink}
         </>
       );
-
     case "mode-select":
       return (
         <>
@@ -107,7 +117,6 @@ function App() {
           {adminLink}
         </>
       );
-
     case "quiz":
       return (
         <QuizPlayer
@@ -118,17 +127,22 @@ function App() {
           onExit={() => setView({ name: "home" })}
         />
       );
-
     case "result":
       return (
         <QuizResult
           quiz={view.quiz}
           result={view.result}
-          onHome={() => { setView({ name: "home" }); setStudent({ ...student, total_points: student.total_points + view.result.total_score, total_completed_quizzes: student.total_completed_quizzes + 1 }); }}
+          onHome={() => {
+            setView({ name: "home" });
+            setStudent({
+              ...student,
+              total_points: student.total_points + view.result.total_score,
+              total_completed_quizzes: student.total_completed_quizzes + 1,
+            });
+          }}
           onRetry={() => setView({ name: "mode-select", quiz: view.quiz })}
         />
       );
-
     case "profile":
       return (
         <>
@@ -140,7 +154,6 @@ function App() {
           {adminLink}
         </>
       );
-
     case "settings":
       return (
         <SettingsPage
@@ -150,7 +163,6 @@ function App() {
           onBack={() => setView({ name: "home" })}
         />
       );
-
     default:
       return null;
   }
