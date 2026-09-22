@@ -1,0 +1,5 @@
+[functions.admin-api]
+verify_jwt = false
+
+[functions.quiz-api]
+verify_jwt = false
