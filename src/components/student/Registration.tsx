@@ -33,7 +33,7 @@ export function Registration({ onRegistered }: { onRegistered: (student: Student
     const endsWithThreeDigits = /\d{3}$/.test(standardName);
 
     if (!endsWithTwoDigits || endsWithThreeDigits) {
-      setError("يجب أن ينتهي الاسم برقمين فقط (مثال: حيدر حميد98 أو أحمد علي12)");
+      setError("يجب أن ينتهي الاسم برقمين فقط (مثال: محمد احمد 56 أو أحمد علي12)");
       return;
     }
 
