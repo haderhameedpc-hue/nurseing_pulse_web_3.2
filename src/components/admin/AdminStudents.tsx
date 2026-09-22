@@ -70,26 +70,52 @@ export function AdminStudents({
     try {
       const studentId = deleteStudent.id;
 
-      // 1. حذف جميع السجلات المرتبطة بالطالب أولاً
-      await supabase.from("student_achievements").delete().eq("student_id", studentId);
-      await supabase.from("name_change_history").delete().eq("student_id", studentId);
-      await supabase.from("quiz_attempts").delete().eq("student_id", studentId);
+      // 1. جلب معرفات محاولات الطالب لحذف تفاصيل الإجابات المرتبطة بها
+      const { data: attempts } = await supabase
+        .from("quiz_attempts")
+        .select("id")
+        .eq("student_id", studentId);
 
-      // 2. حذف الطالب نفسه
-      const { error, count } = await supabase
+      if (attempts && attempts.length > 0) {
+        const attemptIds = attempts.map((a) => a.id);
+        await supabase
+          .from("attempt_answers")
+          .delete()
+          .in("attempt_id", attemptIds);
+      }
+
+      // 2. حذف المحاولات
+      await supabase
+        .from("quiz_attempts")
+        .delete()
+        .eq("student_id", studentId);
+
+      // 3. حذف الأوسمة والجوائز وسجل تغيير الأسماء
+      await supabase
+        .from("student_achievements")
+        .delete()
+        .eq("student_id", studentId);
+
+      await supabase
+        .from("name_change_history")
+        .delete()
+        .eq("student_id", studentId);
+
+      // 4. حذف حساب الطالب نهائياً
+      const { error } = await supabase
         .from("students")
-        .delete({ count: "exact" })
+        .delete()
         .eq("id", studentId);
 
       if (error) throw error;
 
       showToast("تم حذف الطالب وسجلاته بالكامل");
       setDeleteStudent(null);
-      
-      // تحديث القائمة فوراً
+
+      // تحديث الجدول وإخفاء الطالب فوراً من الواجهة
       setStudents((prev) => prev.filter((s) => s.id !== studentId));
     } catch (err: any) {
-      showToast(err.message || "فشل الحذف من قاعدة البيانات", "error");
+      showToast(err.message || "حدث خطأ أثناء الحذف", "error");
     }
   };
 
