@@ -33,7 +33,7 @@ export function Registration({ onRegistered }: { onRegistered: (student: Student
     const endsWithThreeDigits = /\d{3}$/.test(standardName);
 
     if (!endsWithTwoDigits || endsWithThreeDigits) {
-      setError("يجب أن ينتهي الاسم برقمين فقط (مثال: حيدر حميد98 أو أحمد علي12)");
+      setError("يجب أن ينتهي الاسم برقمين فقط (مثال: محمد احمد65 أو أحمد علي12)");
       return;
     }
 
@@ -103,7 +103,7 @@ export function Registration({ onRegistered }: { onRegistered: (student: Student
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="مثال: حيدر حميد98"
+                placeholder="مثال: محمد احمد65"
                 className="w-full px-4 py-3 rounded-lg border border-slate-700 bg-slate-950 text-white placeholder-slate-500 focus:ring-2 focus:ring-teal-500 outline-none transition-shadow text-center text-lg"
                 autoFocus
               />
