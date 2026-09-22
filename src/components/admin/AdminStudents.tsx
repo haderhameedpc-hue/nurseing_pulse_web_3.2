@@ -68,18 +68,28 @@ export function AdminStudents({
   const handleDeleteStudent = async () => {
     if (!deleteStudent) return;
     try {
-      const { error } = await supabase
+      const studentId = deleteStudent.id;
+
+      // 1. حذف جميع السجلات المرتبطة بالطالب أولاً
+      await supabase.from("student_achievements").delete().eq("student_id", studentId);
+      await supabase.from("name_change_history").delete().eq("student_id", studentId);
+      await supabase.from("quiz_attempts").delete().eq("student_id", studentId);
+
+      // 2. حذف الطالب نفسه
+      const { error, count } = await supabase
         .from("students")
-        .delete()
-        .eq("id", deleteStudent.id);
+        .delete({ count: "exact" })
+        .eq("id", studentId);
 
       if (error) throw error;
 
-      showToast("تم حذف الطالب بنجاح");
+      showToast("تم حذف الطالب وسجلاته بالكامل");
       setDeleteStudent(null);
-      fetchStudents();
+      
+      // تحديث القائمة فوراً
+      setStudents((prev) => prev.filter((s) => s.id !== studentId));
     } catch (err: any) {
-      showToast(err.message || "فشل الحذف", "error");
+      showToast(err.message || "فشل الحذف من قاعدة البيانات", "error");
     }
   };
 
