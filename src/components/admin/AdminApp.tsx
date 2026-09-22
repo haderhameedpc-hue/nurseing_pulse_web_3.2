@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import {
   LayoutDashboard, Users, Layers, FileText, HelpCircle, FileEdit,
-  Trophy, BarChart3, Settings, LogOut, Menu, X, Shield, ClipboardList,
-  History, Award, Sliders, Search
+  Trophy, BarChart3, LogOut, Menu, X, Shield, ClipboardList,
+  History, Award, Sliders, Sun, Moon
 } from "lucide-react";
 import { adminApi } from "@/lib/api";
 import { AdminLogin } from "./AdminLogin";
@@ -54,6 +54,22 @@ export function AdminApp({ token, onLogin, onLogout }: AdminAppProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(null);
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    const saved = localStorage.getItem("theme");
+    return saved ? saved === "dark" : true;
+  });
+
+  // تفعيل الوضع الليلي تلقائياً
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDark) {
+      root.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      root.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [isDark]);
 
   if (!token) {
     return <AdminLogin onLogin={onLogin} onBack={() => { window.location.hash = ""; window.location.reload(); }} />;
@@ -94,13 +110,13 @@ export function AdminApp({ token, onLogin, onLogout }: AdminAppProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-slate-900 text-slate-100 flex transition-colors">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-slate-900 text-white transform transition-transform lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="flex items-center justify-between p-4 border-b border-slate-700">
+      <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-slate-950 text-white border-r border-slate-800 transform transition-transform lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <div className="flex items-center justify-between p-4 border-b border-slate-800">
           <div className="flex items-center gap-2">
             <Shield className="w-6 h-6 text-teal-400" />
-            <span className="font-bold">Admin Panel</span>
+            <span className="font-bold text-lg">Admin Panel</span>
           </div>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white">
             <X className="w-5 h-5" />
@@ -112,7 +128,7 @@ export function AdminApp({ token, onLogin, onLogout }: AdminAppProps) {
               key={item.key}
               onClick={() => navigate(item.key)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                page === item.key ? "bg-teal-600 text-white" : "text-slate-300 hover:bg-slate-800"
+                page === item.key ? "bg-teal-600 text-white" : "text-slate-300 hover:bg-slate-800/60"
               }`}
             >
               {item.icon}
@@ -130,22 +146,34 @@ export function AdminApp({ token, onLogin, onLogout }: AdminAppProps) {
       </aside>
 
       {/* Overlay for mobile */}
-      {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+      {sidebarOpen && <div className="fixed inset-0 bg-black/60 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main content */}
-      <div className="flex-1 lg:ml-64">
-        <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
+      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
+        <header className="bg-slate-950/80 backdrop-blur border-b border-slate-800 sticky top-0 z-20">
           <div className="px-4 py-3 flex items-center justify-between">
-            <button onClick={() => setSidebarOpen(true)} className="lg:hidden btn-ghost p-2">
-              <Menu className="w-5 h-5" />
-            </button>
-            <h1 className="text-lg font-semibold text-slate-800">
-              {navItems.find(n => n.key === page)?.label || "Admin"}
-            </h1>
-            <a href="#" className="text-sm text-slate-500 hover:text-teal-600">View Site</a>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setSidebarOpen(true)} className="lg:hidden btn-ghost p-2 text-slate-300">
+                <Menu className="w-5 h-5" />
+              </button>
+              <h1 className="text-lg font-semibold text-slate-100">
+                {navItems.find(n => n.key === page)?.label || "Admin"}
+              </h1>
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setIsDark(!isDark)}
+                className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                title="Toggle Theme"
+              >
+                {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-400" />}
+              </button>
+              <a href="#" className="text-sm text-teal-400 hover:underline">View Site</a>
+            </div>
           </div>
         </header>
-        <main className="p-4 md:p-6">
+
+        <main className="p-4 md:p-6 flex-1 bg-slate-900 text-slate-100">
           {renderPage()}
         </main>
       </div>
