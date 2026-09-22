@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Trophy, Award, Target, Clock, TrendingUp, Settings, LogOut, ChevronRight, ChevronLeft, FolderOpen, FileText, Layers, BookOpen, ListChecks, Shield, GraduationCap } from "lucide-react";
 import type { Student, Stage, Course, Subject, Folder, Quiz, LeaderboardSettings } from "@/lib/api";
 import { studentApi } from "@/lib/api";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface HomeProps {
   student: Student;
@@ -18,7 +19,6 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [leaderboard, setLeaderboard] = useState<{ students: Student[]; settings: LeaderboardSettings | null; enabled: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
-
   const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
@@ -57,27 +57,28 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
         <span className="w-8 h-8 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-teal-600 rounded-lg flex items-center justify-center">
-              <GraduationCapIcon />
+              <GraduationCap className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-slate-900 text-lg leading-none">Quiz Platform</h1>
-              <p className="text-xs text-slate-500 mt-0.5">Welcome, {student.display_name}</p>
+              <h1 className="font-bold text-slate-900 dark:text-white text-lg leading-none">Quiz Platform</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Welcome, {student.display_name}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <button onClick={onOpenSettings} className="btn-ghost" title="Settings">
               <Settings className="w-5 h-5" />
             </button>
@@ -91,10 +92,10 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Stats Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <StatCard icon={<Trophy className="w-5 h-5" />} label="Points" value={student.total_points.toFixed(0)} color="text-amber-600 bg-amber-50" />
-          <StatCard icon={<Target className="w-5 h-5" />} label="Completed" value={student.total_completed_quizzes} color="text-teal-600 bg-teal-50" />
-          <StatCard icon={<TrendingUp className="w-5 h-5" />} label="Highest" value={student.highest_score.toFixed(0)} color="text-blue-600 bg-blue-50" />
-          <StatCard icon={<Clock className="w-5 h-5" />} label="Time Spent" value={formatTime(student.total_time_spent_seconds)} color="text-slate-600 bg-slate-100" />
+          <StatCard icon={<Trophy className="w-5 h-5" />} label="Points" value={student.total_points.toFixed(0)} color="text-amber-600 bg-amber-50 dark:bg-amber-950/40" />
+          <StatCard icon={<Target className="w-5 h-5" />} label="Completed" value={student.total_completed_quizzes} color="text-teal-600 bg-teal-50 dark:bg-teal-950/40" />
+          <StatCard icon={<TrendingUp className="w-5 h-5" />} label="Highest" value={student.highest_score.toFixed(0)} color="text-blue-600 bg-blue-50 dark:bg-blue-950/40" />
+          <StatCard icon={<Clock className="w-5 h-5" />} label="Time Spent" value={formatTime(student.total_time_spent_seconds)} color="text-slate-600 bg-slate-100 dark:bg-slate-800" />
         </div>
 
         {/* Leaderboard toggle */}
@@ -106,7 +107,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
             >
               <div className="flex items-center gap-3">
                 <Trophy className="w-6 h-6 text-amber-500" />
-                <span className="font-semibold text-slate-800">Leaderboard</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">Leaderboard</span>
               </div>
               <ChevronRight className={`w-5 h-5 text-slate-400 transition-transform ${showLeaderboard ? "rotate-90" : ""}`} />
             </button>
@@ -123,7 +124,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
           <div className="flex items-center gap-1.5 text-sm flex-wrap">
             <button
               onClick={() => { setSelectedStage(null); setSelectedCourse(null); setSelectedSubject(null); setSelectedFolder(null); }}
-              className="text-teal-600 hover:underline font-medium"
+              className="text-teal-600 dark:text-teal-400 hover:underline font-medium"
             >
               All Stages
             </button>
@@ -132,7 +133,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
                 <ChevronRight className="w-4 h-4 text-slate-400" />
                 <button
                   onClick={() => { setSelectedCourse(null); setSelectedSubject(null); setSelectedFolder(null); }}
-                  className="text-teal-600 hover:underline font-medium"
+                  className="text-teal-600 dark:text-teal-400 hover:underline font-medium"
                 >
                   {selectedStage.name}
                 </button>
@@ -143,7 +144,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
                 <ChevronRight className="w-4 h-4 text-slate-400" />
                 <button
                   onClick={() => { setSelectedSubject(null); setSelectedFolder(null); }}
-                  className="text-teal-600 hover:underline font-medium"
+                  className="text-teal-600 dark:text-teal-400 hover:underline font-medium"
                 >
                   {selectedCourse.name}
                 </button>
@@ -154,7 +155,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
                 <ChevronRight className="w-4 h-4 text-slate-400" />
                 <button
                   onClick={() => setSelectedFolder(null)}
-                  className="text-teal-600 hover:underline font-medium"
+                  className="text-teal-600 dark:text-teal-400 hover:underline font-medium"
                 >
                   {selectedSubject.name}
                 </button>
@@ -163,7 +164,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
             {selectedFolder && (
               <>
                 <ChevronRight className="w-4 h-4 text-slate-400" />
-                <span className="font-medium text-slate-700">{selectedFolder.name}</span>
+                <span className="font-medium text-slate-700 dark:text-slate-300">{selectedFolder.name}</span>
               </>
             )}
           </div>
@@ -173,7 +174,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
         <div className="card p-6">
           {!selectedStage && (
             <>
-              <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
                 <Layers className="w-5 h-5 text-teal-600" /> Select a Stage
               </h2>
               {stages.length === 0 ? (
@@ -190,7 +191,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
 
           {selectedStage && !selectedCourse && (
             <>
-              <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-teal-600" /> Courses in {selectedStage.name}
               </h2>
               {subjectCourses.length === 0 ? (
@@ -207,7 +208,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
 
           {selectedCourse && !selectedSubject && (
             <>
-              <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
                 <ListChecks className="w-5 h-5 text-teal-600" /> Subjects in {selectedCourse.name}
               </h2>
               {courseSubjects.length === 0 ? (
@@ -224,7 +225,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
 
           {selectedSubject && !selectedFolder && (
             <>
-              <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-teal-600" /> {selectedSubject.name}
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -243,7 +244,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
 
           {selectedFolder && (
             <>
-              <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
                 <FolderOpen className="w-5 h-5 text-teal-600" /> {selectedFolder.name}
               </h2>
               {visibleQuizzes.length === 0 ? (
@@ -263,16 +264,12 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
   );
 }
 
-function GraduationCapIcon() {
-  return <GraduationCap className="w-6 h-6 text-white" />;
-}
-
 function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string | number; color: string }) {
   return (
     <div className="stat-card">
       <div className={`inline-flex p-2 rounded-lg ${color} mb-2`}>{icon}</div>
-      <p className="text-2xl font-bold text-slate-900">{value}</p>
-      <p className="text-xs text-slate-500 mt-0.5">{label}</p>
+      <p className="text-2xl font-bold text-slate-900 dark:text-white">{value}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{label}</p>
     </div>
   );
 }
@@ -281,17 +278,21 @@ function NavItem({ icon, title, desc, onClick, isQuiz }: { icon: React.ReactNode
   return (
     <button
       onClick={onClick}
-      className={`text-left p-4 rounded-xl border transition-all hover:shadow-md hover:border-teal-300 group ${isQuiz ? "border-teal-200 bg-teal-50/30" : "border-slate-200 bg-white"}`}
+      className={`text-left p-4 rounded-xl border transition-all hover:shadow-md hover:border-teal-300 dark:hover:border-teal-500 group ${
+        isQuiz 
+          ? "border-teal-200 dark:border-teal-900/50 bg-teal-50/30 dark:bg-teal-950/20" 
+          : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+      }`}
     >
       <div className="flex items-start gap-3">
-        <div className={`p-2 rounded-lg ${isQuiz ? "bg-teal-100 text-teal-700" : "bg-slate-100 text-slate-600"} group-hover:scale-110 transition-transform`}>
+        <div className={`p-2 rounded-lg ${isQuiz ? "bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"} group-hover:scale-110 transition-transform`}>
           {icon}
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-slate-800 truncate">{title}</h3>
-          {desc && <p className="text-sm text-slate-500 mt-0.5 line-clamp-2">{desc}</p>}
+          <h3 className="font-semibold text-slate-800 dark:text-slate-200 truncate">{title}</h3>
+          {desc && <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">{desc}</p>}
         </div>
-        <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-teal-500 transition-colors flex-shrink-0" />
+        <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-teal-500 transition-colors flex-shrink-0" />
       </div>
     </button>
   );
@@ -300,17 +301,16 @@ function NavItem({ icon, title, desc, onClick, isQuiz }: { icon: React.ReactNode
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="text-center py-12">
-      <div className="inline-flex p-4 bg-slate-100 rounded-full mb-3">
+      <div className="inline-flex p-4 bg-slate-100 dark:bg-slate-800 rounded-full mb-3">
         <FileText className="w-8 h-8 text-slate-400" />
       </div>
-      <p className="text-slate-500">{message}</p>
+      <p className="text-slate-500 dark:text-slate-400">{message}</p>
     </div>
   );
 }
 
 function LeaderboardTable({ students, settings, currentStudentId }: { students: Student[]; settings: LeaderboardSettings | null; currentStudentId: string }) {
   const columns = settings?.columns_config?.filter(c => c.enabled).sort((a, b) => a.order - b.order) || [];
-
   const renderCell = (student: Student, key: string, rank: number) => {
     switch (key) {
       case "rank": return rank;
@@ -329,17 +329,17 @@ function LeaderboardTable({ students, settings, currentStudentId }: { students: 
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-slate-50 border-b border-slate-200">
+          <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800">
             {columns.map(col => (
-              <th key={col.key} className="px-4 py-3 text-left font-semibold text-slate-600">{col.label}</th>
+              <th key={col.key} className="px-4 py-3 text-left font-semibold text-slate-600 dark:text-slate-300">{col.label}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {students.map((student, i) => (
-            <tr key={student.id} className={`border-b border-slate-100 ${student.id === currentStudentId ? "bg-teal-50" : "hover:bg-slate-50"}`}>
+            <tr key={student.id} className={`border-b border-slate-100 dark:border-slate-800 ${student.id === currentStudentId ? "bg-teal-50 dark:bg-teal-950/40" : "hover:bg-slate-50 dark:hover:bg-slate-800/40"}`}>
               {columns.map(col => (
-                <td key={col.key} className={`px-4 py-3 ${col.key === "rank" && i < 3 ? "font-bold" : ""} ${col.key === "display_name" ? "font-medium text-slate-800" : "text-slate-600"}`}>
+                <td key={col.key} className={`px-4 py-3 ${col.key === "rank" && i < 3 ? "font-bold" : ""} ${col.key === "display_name" ? "font-medium text-slate-800 dark:text-slate-200" : "text-slate-600 dark:text-slate-400"}`}>
                   {col.key === "rank" && i === 0 && <span className="text-amber-500">#{renderCell(student, col.key, i + 1)}</span>}
                   {col.key === "rank" && i === 1 && <span className="text-slate-400">#{renderCell(student, col.key, i + 1)}</span>}
                   {col.key === "rank" && i === 2 && <span className="text-orange-400">#{renderCell(student, col.key, i + 1)}</span>}
