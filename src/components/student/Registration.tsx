@@ -3,12 +3,11 @@ import { GraduationCap, Info, ArrowRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Student } from "@/lib/api";
 
-// دالة توحيد الاسم وإزالة المسافات بين الاسم والرقمين الأخيرين
 function normalizeStudentName(input: string): string {
   let cleaned = input.trim();
-  // تحويل الأرقام العربية (٠-٩) إلى أرقام إنجليزية (0-9) إذا وُجدت
-  cleaned = cleaned.replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString());
-  // إزالة أي فراغات موجودة بين آخر كلمة ورقمين النهاية (مثلاً: "حيدر حميد 98" تصبح "حيدر حميد98")
+  // تحويل الأرقام العربية المشرقية إن وجدت إلى أرقام إنجليزية
+  cleaned = cleaned.replace(/[٠-٩]/g, (d) => "0123456789"["٠١٢٣٤٥٦٧٨٩".indexOf(d)]);
+  // إزالة أي مسافة تفصل الاسم عن الرقمين الأخيرين
   cleaned = cleaned.replace(/\s+(\d{2})$/, "$1");
   return cleaned;
 }
@@ -29,8 +28,11 @@ export function Registration({ onRegistered }: { onRegistered: (student: Student
 
     const standardName = normalizeStudentName(name);
 
-    // التحقق من أن الاسم ينتهي برقمين بالضبط
-    if (!/\d{2}$/.test(standardName) \vert{}\vert{} /\d{3}$/.test(standardName)) {
+    // التحقق من أن الاسم ينتهي برقمين فقط
+    const endsWithTwoDigits = /\d{2}$/.test(standardName);
+    const endsWithThreeDigits = /\d{3}$/.test(standardName);
+
+    if (!endsWithTwoDigits || endsWithThreeDigits) {
       setError("يجب أن ينتهي الاسم برقمين فقط (مثال: حيدر حميد98 أو أحمد علي12)");
       return;
     }
@@ -38,7 +40,7 @@ export function Registration({ onRegistered }: { onRegistered: (student: Student
     setLoading(true);
 
     try {
-      // 1. البحث عما إذا كان الطالب موجوداً مسبقاً (سواء بالمسافة أو بدونها)
+      // 1. البحث عما إذا كان الطالب موجوداً مسبقاً
       const { data: existing, error: searchErr } = await supabase
         .from("students")
         .select("*")
@@ -58,7 +60,7 @@ export function Registration({ onRegistered }: { onRegistered: (student: Student
         return;
       }
 
-      // 2. إذا لم يكن موجوداً، يتم إنشاء حسابه تلقائياً
+      // 2. إذا لم يكن مسجلاً، يتم إنشاء الحساب تلقائياً
       const { data: newStudent, error: insertErr } = await supabase
         .from("students")
         .insert({ display_name: standardName })
