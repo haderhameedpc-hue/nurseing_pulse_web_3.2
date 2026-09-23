@@ -284,9 +284,9 @@ export const adminApi = {
   updateLeaderboardSettings: (token: string, data: Partial<LeaderboardSettings>) => apiCall("/admin-api/leaderboard-settings", { method: "PUT", body: JSON.stringify(data) }, token),
 
   // Students
-  deleteStudent: (token: string, id: string) => apiCall(`/admin-api/students/${id}`, { method: "DELETE" }, token),
   getStudents: (token: string, search?: string) => apiCall(`/admin-api/students${search ? `?search=${encodeURIComponent(search)}` : ""}`, {}, token),
   getStudentDetail: (token: string, id: string) => apiCall(`/admin-api/students/${id}`, {}, token),
+  deleteStudent: (token: string, id: string) => apiCall(`/admin-api/students/${id}`, { method: "DELETE" }, token),
 
   // Attempts
   getAttempts: (token: string, studentId?: string, quizId?: string) => {
