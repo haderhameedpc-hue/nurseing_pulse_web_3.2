@@ -29,7 +29,8 @@ export function AdminBulkImport({ token }: { token: string }) {
   const [importing, setImporting] = useState(false);
 
   useEffect(() => {
-    adminApi.getQuizzes(token)
+    adminApi
+      .getQuizzes(token)
       .then((qz) => {
         setQuizzes(qz || []);
         setLoading(false);
@@ -37,7 +38,7 @@ export function AdminBulkImport({ token }: { token: string }) {
       .catch(() => setLoading(false));
   }, [token]);
 
-  // دالة استخراج حرف الإجابة الصحيحة
+  // استخراج حرف الإجابة الصحيحة وتحويل الحروف العربية
   const extractCorrectLetter = (line: string): "a" | "b" | "c" | "d" | "e" | null => {
     const match = line.match(/(?:✅|✔️|☑️|\*)?\s*(?:إجابة|الجواب|الإجابة|الحل|answer|correct)[\s:\-–—\.]*([a-eA-Eأ-ه])/i);
     let letter = match ? match[1].toLowerCase() : null;
@@ -62,7 +63,7 @@ export function AdminBulkImport({ token }: { token: string }) {
       return;
     }
 
-    // تقسيم النص إلى أسئلة مفصولة بأسطر فارغة
+    // تقسيم النص إلى كتل أسئلة مفصولة بأسطر فارغة
     const blocks = rawText
       .trim()
       .split(/\n\s*\n+/)
@@ -96,7 +97,7 @@ export function AdminBulkImport({ token }: { token: string }) {
         const line = lines[i];
         const lower = line.toLowerCase();
 
-        // 1. هل هذا سطر الإجابة الصحيحة؟
+        // 1. فحص سطر الإجابة الصحيحة
         const isAnswerLine =
           line.includes("✅") ||
           line.includes("✔️") ||
@@ -113,7 +114,7 @@ export function AdminBulkImport({ token }: { token: string }) {
           continue;
         }
 
-        // 2. هل هذا سطر أحد الخيارات؟ (a, b, c, d, e)
+        // 2. فحص أسطر الخيارات (a, b, c, d, e)
         const optionMatch = line.match(/^([a-eA-Eأ-ه])[\)\.\-:\s]\s*(.+)$/i);
         if (state !== "AFTER_ANSWER" && optionMatch) {
           state = "OPTIONS";
@@ -133,7 +134,7 @@ export function AdminBulkImport({ token }: { token: string }) {
           continue;
         }
 
-        // 3. أسطر ما بعد الإجابة الصحيحة (ترجمة الجواب أو الشرح)
+        // 3. أسطر ما بعد الإجابة (ترجمة الجواب أو الشرح)
         if (state === "AFTER_ANSWER") {
           if (lower.startsWith("explanation:") || lower.startsWith("شرح:") || lower.startsWith("توضيح:")) {
             q.explanation = line.replace(/^(explanation|شرح|توضيح)[\s:\-–—\.]*/i, "").trim();
@@ -239,11 +240,11 @@ export function AdminBulkImport({ token }: { token: string }) {
             <Upload className="w-5 h-5 text-teal-400" /> الاستيراد السريع للأسئلة (Bulk Import)
           </h2>
           <span className="flex items-center gap-1.5 text-xs text-teal-400 bg-teal-950/60 px-3 py-1 rounded-full border border-teal-800/60 font-semibold">
-            <Sparkles className="w-3.5 h-3.5" /> محلل ذكي يدعم 4 و 5 خيارات تلقائياً
+            <Sparkles className="w-3.5 h-3.5" /> نظام تلقائي ذكي (يدعم 4 و 5 خيارات معاً)
           </span>
         </div>
         <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-          الصق أسئلتك مباشرة بالصيغة المعتادة لديك، وسيقوم النظام تلقائياً بفرز السؤال وترجمته وخياراته (A, B, C, D, E) والإجابة الصحيحة وترجمتها.
+          الصق أسئلتك مباشرة بالصيغة المعتادة لديك، وسيقوم النظام تلقائياً وبدون أي تعقيد بفرز السؤال وترجمته وخياراته (A, B, C, D, E) والإجابة الصحيحة.
         </p>
 
         <div className="mb-4">
