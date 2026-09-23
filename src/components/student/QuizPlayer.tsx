@@ -160,6 +160,7 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
     { key: "b", text: q.answer_b },
     { key: "c", text: q.answer_c },
     { key: "d", text: q.answer_d },
+  ...(q.answer_e ? [{ key: "e", text: q.answer_e }] : []),
   ];
 
   const formatTime = (s: number) => {
