@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Upload, FileText, AlertCircle, CheckCircle2, Sparkles, Layers } from "lucide-react";
+import { Upload, FileText, AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
 import { adminApi } from "@/lib/api";
 import type { Quiz, QuestionTemplate } from "@/lib/api";
 import { useToast, LoadingSpinner } from "./shared";
@@ -42,14 +42,12 @@ export function AdminBulkImport({ token }: { token: string }) {
       .catch(() => setLoading(false));
   }, [token]);
 
-  // دالة استخراج حرف الإجابة وتحويل الحروف العربية إن وجدت
+  // دالة استخراج حرف الإجابة الصحيحة وتحويل الحروف العربية
   const extractCorrectLetter = (line: string): "a" | "b" | "c" | "d" | "e" | null => {
-    // يبحث عن نمط مثل: "✅ الإجابة: b) answer" أو "Answer: c" أو "الإجابة: أ"
     const match = line.match(/(?:✅|✔️|☑️|\*)?\s*(?:إجابة|الجواب|الإجابة|الحل|answer|correct)[\s:\-–—\.]*([a-eA-Eأ-ه])/i);
     let letter = match ? match[1].toLowerCase() : null;
 
     if (!letter) {
-      // محاولة البحث عن أول حرف خيار يتبعه قوس مثل "b)"
       const fallback = line.match(/\b([a-eA-Eأ-ه])[\)\.]/i);
       if (fallback) letter = fallback[1].toLowerCase();
     }
@@ -63,21 +61,20 @@ export function AdminBulkImport({ token }: { token: string }) {
     return null;
   };
 
-  // معالجة وتحليل دفعة الأسئلة بالكامل
   const handleParse = () => {
     if (!rawText.trim()) {
       showToast("يرجى لصق نص الأسئلة أولاً", "error");
       return;
     }
 
-    // تقسيم النص إلى أسئلة مفصولة بسطر فارغ
+    // فصل كل سؤال عن الآخر بالأسطر الفارغة
     const blocks = rawText
       .trim()
       .split(/\n\s*\n+/)
       .map((b) => b.trim())
       .filter((b) => b.length > 0);
 
-    const parsedResults: ParsedQuestion[] = blocks.map((block, bIdx) => {
+    const parsedResults: ParsedQuestion[] = blocks.map((block) => {
       const lines = block
         .split("\n")
         .map((l) => l.trim())
@@ -103,7 +100,7 @@ export function AdminBulkImport({ token }: { token: string }) {
         const line = lines[i];
         const lower = line.toLowerCase();
 
-        // 1. هل هذا سطر الإجابة الصحيحة؟
+        // 1. فحص سطر الإجابة الصحيحة
         const isAnswerLine =
           line.includes("✅") ||
           line.includes("✔️") ||
@@ -115,12 +112,12 @@ export function AdminBulkImport({ token }: { token: string }) {
           if (detectedLetter) {
             q.correct_answer = detectedLetter;
           } else {
-            q.errors.push(`لم نتمكن من تحديد حرف الإجابة في السطر: "${line}"`);
+            q.errors.push(`لم يتم استخراج حرف الإجابة من: "${line}"`);
           }
           continue;
         }
 
-        // 2. هل هذا سطر أحد الخيارات؟ (A, B, C, D, E)
+        // 2. فحص أسطر الخيارات (A, B, C, D, E)
         const optionMatch = line.match(/^([a-eA-Eأ-ه])[\)\.\-:\s]\s*(.+)$/i);
         if (state !== "AFTER_ANSWER" && optionMatch) {
           state = "OPTIONS";
@@ -168,7 +165,6 @@ export function AdminBulkImport({ token }: { token: string }) {
         // 4. أسطر السؤال وترجمته (قبل الخيارات)
         if (state === "QUESTION") {
           if (!q.question_text) {
-            // إزالة الترقيم مثل "1." أو "1.a" أو "1) "
             q.question_text = line.replace(/^\s*\d+[\.\)\-:]\s*/, "").trim();
           } else if (!q.question_translation) {
             q.question_translation = line;
@@ -178,7 +174,6 @@ export function AdminBulkImport({ token }: { token: string }) {
         }
       }
 
-      // التحقق من الحقول الأساسية
       if (!q.question_text) q.errors.push("نص السؤال مفقود");
       if (!q.answer_a) q.errors.push("الخيار A مفقود");
       if (!q.answer_b) q.errors.push("الخيار B مفقود");
@@ -193,16 +188,15 @@ export function AdminBulkImport({ token }: { token: string }) {
     showToast(`تم التعرف على ${parsedResults.length} سؤال (${valid} جاهز للاستيراد)`);
   };
 
-  // استيراد الأسئلة الصالحة إلى الاختبار
   const handleImport = async () => {
     if (!selectedQuiz) {
-      showToast("يرجى اختيار الاختبار أولاً", "error");
+      showToast("يرجى تحديد الاختبار أولاً", "error");
       return;
     }
 
     const validQuestions = parsed.filter((p) => p.errors.length === 0);
     if (validQuestions.length === 0) {
-      showToast("لا توجد أسئلة صالحة للاستيراد", "error");
+      showToast("لا توجد أسئلة صالحة للإضافة", "error");
       return;
     }
 
@@ -224,10 +218,12 @@ export function AdminBulkImport({ token }: { token: string }) {
           is_enabled: true,
           is_visible: true,
         };
-        // إضافة الخيار E فقط إذا كان السؤال يحتوي عليه
+
+        // إرسال answer_e فقط إذا كان السؤال يحتوي على خيار خامس
         if (q.answer_e && q.answer_e.trim()) {
           item.answer_e = q.answer_e.trim();
         }
+
         return item;
       });
 
@@ -254,7 +250,7 @@ export function AdminBulkImport({ token }: { token: string }) {
           <Upload className="w-5 h-5 text-teal-400" /> الاستيراد السريع للأسئلة (Bulk Import)
         </h2>
         <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-          يدعم النظام تلقائياً أسلوبك: نص السؤال، ترجمته، 4 أو 5 خيارات، وعلامة الإجابة الصحيحة مع ترجمتها.
+          يتعرف النظام تلقائياً على صيغة أسئلتك (نص السؤال، ترجمته، 4 أو 5 خيارات، وعلامة الإجابة الصحيحة مع ترجمتها).
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -275,18 +271,18 @@ export function AdminBulkImport({ token }: { token: string }) {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-1.5">2. وضع المعالجة</label>
+            <label className="block text-sm font-semibold text-slate-300 mb-1.5">2. وضع التحليل</label>
             <div className="input-field flex items-center justify-between text-xs text-teal-300 bg-slate-900">
               <span className="flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-teal-400" /> نظام التعرف الذكي (4 و 5 خيارات تلقائياً)
+                <Sparkles className="w-4 h-4 text-teal-400" /> التعرف الذكي (دعم تلقائي لـ 4 و 5 خيارات)
               </span>
-              <span className="text-slate-500 font-mono">نشط</span>
+              <span className="text-slate-500 font-mono">تلقائي</span>
             </div>
           </div>
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-semibold text-slate-300 mb-1.5">3. الصق قائمة الأسئلة هنا</label>
+          <label className="block text-sm font-semibold text-slate-300 mb-1.5">3. الصق قائمة الأسئلة</label>
           <textarea
             className="input-field font-mono text-xs leading-relaxed text-left"
             dir="ltr"
@@ -300,17 +296,9 @@ b) to choose
 c) to choose
 d) to choose
 ✅ الإجابة: b) answer
-ترجمه الجواب
-
-2.second question?
-a) option A
-b) option B
-c) option C
-d) option D
-e) option E
-✅ الإجابة: c) answer`}
+ترجمه الجواب`}
           />
-          <p className="text-[11px] text-slate-500 mt-1">تأكد من ترك سطر فارغ بين كل سؤال والآخر.</p>
+          <p className="text-[11px] text-slate-500 mt-1">اترك سطراً فارغاً واحداً بين كل سؤال والذي يليه.</p>
         </div>
 
         <button onClick={handleParse} className="btn-secondary flex items-center gap-2 text-sm font-semibold">
