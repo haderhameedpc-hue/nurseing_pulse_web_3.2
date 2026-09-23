@@ -311,6 +311,28 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
             </>
           )}
         </div>
+
+        {/* لوحة الصدارة - مفتوحة دائماً */}
+        {leaderboard?.enabled && leaderboard.students.length > 0 && (
+          <div className="card overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-50 dark:bg-amber-950/40 text-amber-500 rounded-lg">
+                  <Trophy className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-slate-900 dark:text-white text-base">لوحة الشرف (Leaderboard)</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">ترتيب الطلاب وفقاً لإجمالي النقاط والمحاولات</p>
+                </div>
+              </div>
+            </div>
+            <LeaderboardTable
+              students={leaderboard.students}
+              settings={leaderboard.settings}
+              currentStudentId={student.id}
+            />
+          </div>
+        )}
         
         {/* ملخص الإحصائيات */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
