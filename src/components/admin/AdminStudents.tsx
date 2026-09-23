@@ -68,52 +68,12 @@ export function AdminStudents({
   const handleDeleteStudent = async () => {
     if (!deleteStudent) return;
     try {
-      const studentId = deleteStudent.id;
-
-      // 1. جلب معرفات محاولات الطالب لحذف تفاصيل الإجابات المرتبطة بها
-      const { data: attempts } = await supabase
-        .from("quiz_attempts")
-        .select("id")
-        .eq("student_id", studentId);
-
-      if (attempts && attempts.length > 0) {
-        const attemptIds = attempts.map((a) => a.id);
-        await supabase
-          .from("attempt_answers")
-          .delete()
-          .in("attempt_id", attemptIds);
-      }
-
-      // 2. حذف المحاولات
-      await supabase
-        .from("quiz_attempts")
-        .delete()
-        .eq("student_id", studentId);
-
-      // 3. حذف الأوسمة والجوائز وسجل تغيير الأسماء
-      await supabase
-        .from("student_achievements")
-        .delete()
-        .eq("student_id", studentId);
-
-      await supabase
-        .from("name_change_history")
-        .delete()
-        .eq("student_id", studentId);
-
-      // 4. حذف حساب الطالب نهائياً
-      const { error } = await supabase
-        .from("students")
-        .delete()
-        .eq("id", studentId);
-
-      if (error) throw error;
+      // الحذف عبر صلاحية الإدارة العليا (Service Role)
+      await adminApi.deleteStudent(token, deleteStudent.id);
 
       showToast("تم حذف الطالب وسجلاته بالكامل");
+      setStudents((prev) => prev.filter((s) => s.id !== deleteStudent.id));
       setDeleteStudent(null);
-
-      // تحديث الجدول وإخفاء الطالب فوراً من الواجهة
-      setStudents((prev) => prev.filter((s) => s.id !== studentId));
     } catch (err: any) {
       showToast(err.message || "حدث خطأ أثناء الحذف", "error");
     }
