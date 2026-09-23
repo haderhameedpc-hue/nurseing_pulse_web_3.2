@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Search, Eye, ArrowLeft, Trash2, Edit2, Plus, Award, Trophy } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { adminApi } from "@/lib/api";
 import { LoadingSpinner, EmptyState, Modal, ConfirmDialog, useToast } from "./shared";
 
 export function AdminStudents({
