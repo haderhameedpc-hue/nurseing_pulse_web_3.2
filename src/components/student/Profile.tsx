@@ -11,44 +11,57 @@ interface ModeSelectionProps {
 
 export function ModeSelection({ quiz, onSelectMode, onBack }: ModeSelectionProps) {
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 transition-colors">
       <div className="w-full max-w-lg">
-        <button onClick={onBack} className="btn-ghost mb-4 flex items-center gap-2">
-          <ArrowLeft className="w-5 h-5" /> Back
+        <button
+          onClick={onBack}
+          className="btn-ghost mb-4 flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+        >
+          <ArrowLeft className="w-5 h-5" /> العودة للرئيسية
         </button>
-        <div className="card p-8 animate-fadeIn">
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">{quiz.name}</h1>
-          {quiz.description && <p className="text-slate-500 mb-4">{quiz.description}</p>}
+        <div className="card p-8 animate-fadeIn bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl rounded-2xl text-right">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{quiz.name}</h1>
+          {quiz.description && (
+            <p className="text-slate-600 dark:text-slate-400 mb-4 text-sm leading-relaxed">{quiz.description}</p>
+          )}
           {quiz.instructions && (
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 mb-6">
-              <p className="text-sm text-blue-800">{quiz.instructions}</p>
+            <div className="p-4 bg-teal-50 dark:bg-teal-950/40 rounded-xl border border-teal-200 dark:border-teal-800/60 mb-6">
+              <p className="text-sm text-teal-800 dark:text-teal-300 leading-relaxed">{quiz.instructions}</p>
             </div>
           )}
-
           <div className="space-y-3">
-            <p className="font-semibold text-slate-700">Choose a mode:</p>
+            <p className="font-semibold text-slate-700 dark:text-slate-200 text-sm">اختر نمط الاختبار:</p>
             {quiz.timed_mode_enabled && (
-              <button onClick={() => onSelectMode("timed")} className="w-full text-left p-5 rounded-xl border-2 border-slate-200 hover:border-teal-400 hover:bg-teal-50/30 transition-all group">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-teal-100 text-teal-700 rounded-xl group-hover:scale-110 transition-transform">
+              <button
+                onClick={() => onSelectMode("timed")}
+                className="w-full text-right p-5 rounded-xl border-2 border-slate-200 dark:border-slate-800 hover:border-teal-500 dark:hover:border-teal-500 hover:bg-teal-50/40 dark:hover:bg-teal-950/30 transition-all group bg-white dark:bg-slate-900 shadow-sm"
+              >
+                <div className="flex items-center gap-4 flex-row-reverse">
+                  <div className="p-3 bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-400 rounded-xl group-hover:scale-110 transition-transform shrink-0">
                     <Clock className="w-6 h-6" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-slate-800">Timed Mode</h3>
-                    <p className="text-sm text-slate-500">{quiz.time_limit_seconds}s per question{quiz.timed_bonus_points > 0 ? ` · +${quiz.timed_bonus_points} bonus points` : ""}</p>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-base">نمط المؤقت (Timed Mode)</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      {quiz.time_limit_seconds} ثانية لكل سؤال
+                      {quiz.timed_bonus_points > 0 ? ` • +${quiz.timed_bonus_points} نقاط إضافية` : ""}
+                    </p>
                   </div>
                 </div>
               </button>
             )}
             {quiz.untimed_mode_enabled && (
-              <button onClick={() => onSelectMode("untimed")} className="w-full text-left p-5 rounded-xl border-2 border-slate-200 hover:border-teal-400 hover:bg-teal-50/30 transition-all group">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-100 text-blue-700 rounded-xl group-hover:scale-110 transition-transform">
+              <button
+                onClick={() => onSelectMode("untimed")}
+                className="w-full text-right p-5 rounded-xl border-2 border-slate-200 dark:border-slate-800 hover:border-teal-500 dark:hover:border-teal-500 hover:bg-teal-50/40 dark:hover:bg-teal-950/30 transition-all group bg-white dark:bg-slate-900 shadow-sm"
+              >
+                <div className="flex items-center gap-4 flex-row-reverse">
+                  <div className="p-3 bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-400 rounded-xl group-hover:scale-110 transition-transform shrink-0">
                     <Target className="w-6 h-6" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-slate-800">Untimed Mode</h3>
-                    <p className="text-sm text-slate-500">No time pressure · Take your time</p>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-base">نمط بدون وقت (Untimed Mode)</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">بدون ضغط عداد الوقت • تصفح براحتك</p>
                   </div>
                 </div>
               </button>
@@ -74,7 +87,7 @@ export function Profile({ studentId, studentName, onBack }: ProfileProps) {
   useEffect(() => {
     Promise.all([studentApi.getMyAttempts(studentId), studentApi.getStudent(studentId)])
       .then(([attData, stData]) => {
-        setAttempts(attData);
+        setAttempts(attData || []);
         setAchievements(stData.achievements || []);
         setLoading(false);
       })
@@ -89,7 +102,7 @@ export function Profile({ studentId, studentName, onBack }: ProfileProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
         <span className="w-8 h-8 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
       </div>
     );
@@ -99,71 +112,55 @@ export function Profile({ studentId, studentName, onBack }: ProfileProps) {
   const trophies = achievements.filter((a: any) => a.achievements?.achievement_type === "trophy");
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-20">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-20">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
           <button onClick={onBack} className="btn-ghost flex items-center gap-2">
-            <ArrowLeft className="w-5 h-5" /> Back
+            <ArrowLeft className="w-5 h-5" /> العودة
           </button>
-          <h1 className="font-semibold text-slate-800">My Profile</h1>
+          <h1 className="font-semibold text-slate-800 dark:text-slate-100">الملف الشخصي</h1>
         </div>
       </div>
-
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* Student info */}
-        <div className="card p-6">
-          <h2 className="text-xl font-bold text-slate-800">{studentName}</h2>
-          <p className="text-sm text-slate-500 mt-1">Student ID: {studentId.slice(0, 8)}...</p>
+        <div className="card p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">{studentName}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">معرف الطالب: {studentId.slice(0, 8)}...</p>
         </div>
 
-        {/* Achievements */}
-        <div className="card p-6">
-          <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-500" /> Achievements
+        <div className="card p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+          <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-amber-500" /> الأوسمة والجوائز
           </h3>
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-100 dark:border-amber-900/50">
               <Award className="w-8 h-8 text-amber-500 mb-2" />
-              <p className="text-2xl font-bold text-amber-700">{badges.length}</p>
-              <p className="text-sm text-amber-600">Badges</p>
+              <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">{badges.length}</p>
+              <p className="text-sm text-amber-600 dark:text-amber-300">أوسمة</p>
             </div>
-            <div className="p-4 bg-teal-50 rounded-xl border border-teal-100">
-              <Trophy className="w-8 h-8 text-teal-600 mb-2" />
-              <p className="text-2xl font-bold text-teal-700">{trophies.length}</p>
-              <p className="text-sm text-teal-600">Trophies</p>
+            <div className="p-4 bg-teal-50 dark:bg-teal-950/30 rounded-xl border border-teal-100 dark:border-teal-900/50">
+              <Trophy className="w-8 h-8 text-teal-600 dark:text-teal-400 mb-2" />
+              <p className="text-2xl font-bold text-teal-700 dark:text-teal-400">{trophies.length}</p>
+              <p className="text-sm text-teal-600 dark:text-teal-300">كؤوس</p>
             </div>
           </div>
-          {achievements.length > 0 && (
-            <div className="mt-4 space-y-2">
-              {achievements.map((a: any) => (
-                <div key={a.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                  <div className={`p-2 rounded-lg ${a.achievements?.achievement_type === "badge" ? "bg-amber-100 text-amber-600" : "bg-teal-100 text-teal-600"}`}>
-                    {a.achievements?.achievement_type === "badge" ? <Award className="w-5 h-5" /> : <Trophy className="w-5 h-5" />}
-                  </div>
-                  <div>
-                    <p className="font-medium text-slate-800 text-sm">{a.achievements?.name}</p>
-                    <p className="text-xs text-slate-500">{a.achievements?.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* Quiz History */}
-        <div className="card p-6">
-          <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-teal-600" /> Quiz History
+        <div className="card p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+          <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-teal-600 dark:text-teal-400" /> سجل المحاولات
           </h3>
           {attempts.length === 0 ? (
-            <p className="text-slate-500 text-center py-8">No quiz attempts yet.</p>
+            <p className="text-slate-500 dark:text-slate-400 text-center py-8">لا توجد محاولات حتى الآن.</p>
           ) : (
             <div className="space-y-3">
               {attempts.map((att: any) => (
-                <div key={att.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                <div
+                  key={att.id}
+                  className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-100 dark:border-slate-800"
+                >
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-slate-800 truncate">{att.quizzes?.name || "Quiz"}</p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+                    <p className="font-medium text-slate-900 dark:text-white truncate">{att.quizzes?.name || "اختبار"}</p>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 dark:text-slate-400">
                       <span className="flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3 text-green-500" /> {att.correct_answers}
                       </span>
@@ -173,14 +170,11 @@ export function Profile({ studentId, studentName, onBack }: ProfileProps) {
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" /> {formatTime(att.completion_time_seconds)}
                       </span>
-                      <span className={`badge ${att.mode === "timed" ? "bg-teal-100 text-teal-700" : "bg-blue-100 text-blue-700"}`}>
-                        {att.mode}
-                      </span>
                     </div>
                   </div>
-                  <div className="text-right ml-4">
-                    <p className="text-lg font-bold text-slate-800">{att.percentage}%</p>
-                    <p className="text-xs text-slate-500">{att.score.toFixed(0)} pts</p>
+                  <div className="text-left mr-4">
+                    <p className="text-lg font-bold text-slate-900 dark:text-white">{att.percentage}%</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{att.score.toFixed(0)} نقطة</p>
                   </div>
                 </div>
               ))}
@@ -210,65 +204,53 @@ export function SettingsPage({ studentId, currentName, onNameChanged, onBack }: 
     setError("");
     setSuccess("");
     if (!newName.trim()) {
-      setError("Please enter a new name.");
+      setError("يرجى إدخال الاسم الجديد.");
       return;
     }
     setLoading(true);
     try {
       await studentApi.changeName(studentId, newName);
-      setSuccess("Name changed successfully!");
+      setSuccess("تم تغيير الاسم بنجاح!");
       onNameChanged(newName.trim());
       setNewName("");
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: any) {
+      setError(err.message || "حدث خطأ");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-20">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-20">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           <button onClick={onBack} className="btn-ghost flex items-center gap-2">
-            <ArrowLeft className="w-5 h-5" /> Back
+            <ArrowLeft className="w-5 h-5" /> العودة
           </button>
-          <h1 className="font-semibold text-slate-800">Settings</h1>
+          <h1 className="font-semibold text-slate-900 dark:text-white">الإعدادات</h1>
         </div>
       </div>
-
       <div className="max-w-2xl mx-auto px-4 py-6">
-        <div className="card p-6">
-          <h2 className="font-semibold text-slate-800 mb-2">Change Your Name</h2>
-          <p className="text-sm text-slate-500 mb-1">Current name: <strong>{currentName}</strong></p>
-          <p className="text-xs text-slate-400 mb-6">Your Student ID and all your results, points, badges, and trophies will remain unchanged.</p>
-
-          <form onSubmit={handleChange} className="space-y-4">
+        <div className="card p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-right">
+          <h2 className="font-semibold text-slate-900 dark:text-white mb-2">تغيير اسم الطالب</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">
+            الاسم الحالي: <strong>{currentName}</strong>
+          </p>
+          <form onSubmit={handleChange} className="space-y-4 mt-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">New Name</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">الاسم الجديد</label>
               <input
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="e.g. Ahmed Ali34"
+                placeholder="مثال: أحمد علي12"
                 className="input-field"
               />
-              <p className="text-xs text-slate-400 mt-1">Must end with exactly two digits (e.g. 34, 07, 12).</p>
             </div>
-
-            {error && (
-              <div className="p-3 bg-red-50 rounded-lg border border-red-100">
-                <p className="text-sm text-red-700">{error}</p>
-              </div>
-            )}
-            {success && (
-              <div className="p-3 bg-green-50 rounded-lg border border-green-100">
-                <p className="text-sm text-green-700">{success}</p>
-              </div>
-            )}
-
-            <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2">
-              {loading ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : "Save New Name"}
+            {error && <p className="text-sm text-red-500">{error}</p>}
+            {success && <p className="text-sm text-green-500">{success}</p>}
+            <button type="submit" disabled={loading} className="btn-primary">
+              {loading ? "جاري الحفظ..." : "حفظ الاسم"}
             </button>
           </form>
         </div>
