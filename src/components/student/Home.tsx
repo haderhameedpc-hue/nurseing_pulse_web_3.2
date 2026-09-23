@@ -104,6 +104,146 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
         </div>
       </header>
 
+      <div className="card p-4 mb-4">
+          <div className="flex items-center gap-1.5 text-sm flex-wrap">
+            <button
+              onClick={() => { setSelectedStage(null); setSelectedCourse(null); setSelectedSubject(null); setSelectedFolder(null); }}
+              className="text-teal-600 dark:text-teal-400 hover:underline font-medium"
+            >
+              All Stages
+            </button>
+            {selectedStage && (
+              <>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+                <button
+                  onClick={() => { setSelectedCourse(null); setSelectedSubject(null); setSelectedFolder(null); }}
+                  className="text-teal-600 dark:text-teal-400 hover:underline font-medium"
+                >
+                  {selectedStage.name}
+                </button>
+              </>
+            )}
+            {selectedCourse && (
+              <>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+                <button
+                  onClick={() => { setSelectedSubject(null); setSelectedFolder(null); }}
+                  className="text-teal-600 dark:text-teal-400 hover:underline font-medium"
+                >
+                  {selectedCourse.name}
+                </button>
+              </>
+            )}
+            {selectedSubject && (
+              <>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+                <button
+                  onClick={() => setSelectedFolder(null)}
+                  className="text-teal-600 dark:text-teal-400 hover:underline font-medium"
+                >
+                  {selectedSubject.name}
+                </button>
+              </>
+            )}
+            {selectedFolder && (
+              <>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+                <span className="font-medium text-slate-700 dark:text-slate-300">{selectedFolder.name}</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Quiz Navigation Content */}
+        <div className="card p-6">
+          {!selectedStage && (
+            <>
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+                <Layers className="w-5 h-5 text-teal-600" /> Select a Stage
+              </h2>
+              {stages.length === 0 ? (
+                <EmptyState message="No stages available yet. Please check back later." />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {stages.map(stage => (
+                    <NavItem key={stage.id} icon={<Layers className="w-5 h-5" />} title={stage.name} desc={stage.description} onClick={() => setSelectedStage(stage)} />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {selectedStage && !selectedCourse && (
+            <>
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-teal-600" /> Courses in {selectedStage.name}
+              </h2>
+              {subjectCourses.length === 0 ? (
+                <EmptyState message="No courses in this stage yet." />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {subjectCourses.map(course => (
+                    <NavItem key={course.id} icon={<BookOpen className="w-5 h-5" />} title={course.name} desc={course.description} onClick={() => setSelectedCourse(course)} />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {selectedCourse && !selectedSubject && (
+            <>
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+                <ListChecks className="w-5 h-5 text-teal-600" /> Subjects in {selectedCourse.name}
+              </h2>
+              {courseSubjects.length === 0 ? (
+                <EmptyState message="No subjects in this course yet." />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {courseSubjects.map(subject => (
+                    <NavItem key={subject.id} icon={<ListChecks className="w-5 h-5" />} title={subject.name} desc={subject.description} onClick={() => setSelectedSubject(subject)} />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {selectedSubject && !selectedFolder && (
+            <>
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-teal-600" /> {selectedSubject.name}
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {subjectFolders.map(folder => (
+                  <NavItem key={folder.id} icon={<FolderOpen className="w-5 h-5" />} title={folder.name} desc="Additional topics" onClick={() => setSelectedFolder(folder)} />
+                ))}
+                {visibleQuizzes.map(quiz => (
+                  <NavItem key={quiz.id} icon={<FileText className="w-5 h-5" />} title={quiz.name} desc={quiz.description} onClick={() => onSelectQuiz(quiz)} isQuiz />
+                ))}
+                {subjectFolders.length === 0 && visibleQuizzes.length === 0 && (
+                  <EmptyState message="No quizzes or folders available in this subject yet." />
+                )}
+              </div>
+            </>
+          )}
+
+          {selectedFolder && (
+            <>
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+                <FolderOpen className="w-5 h-5 text-teal-600" /> {selectedFolder.name}
+              </h2>
+              {visibleQuizzes.length === 0 ? (
+                <EmptyState message="No quizzes in this folder yet." />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {visibleQuizzes.map(quiz => (
+                    <NavItem key={quiz.id} icon={<FileText className="w-5 h-5" />} title={quiz.name} desc={quiz.description} onClick={() => onSelectQuiz(quiz)} isQuiz />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Stats Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
