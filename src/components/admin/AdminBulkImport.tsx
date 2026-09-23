@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { Upload, FileText, AlertCircle, CheckCircle2, Layers, Sparkles, HelpCircle } from "lucide-react";
+import { Upload, FileText, AlertCircle, CheckCircle2, Sparkles, Layers } from "lucide-react";
 import { adminApi } from "@/lib/api";
 import type { Quiz, QuestionTemplate } from "@/lib/api";
-import { useToast, LoadingSpinner, EmptyState } from "./shared";
-import { LINE_ROLES } from "./AdminTemplates";
+import { useToast, LoadingSpinner } from "./shared";
 
 interface ParsedQuestion {
   question_text: string;
@@ -12,7 +11,8 @@ interface ParsedQuestion {
   answer_b: string;
   answer_c: string;
   answer_d: string;
-  correct_answer: "a" | "b" | "c" | "d";
+  answer_e?: string;
+  correct_answer: "a" | "b" | "c" | "d" | "e";
   correct_answer_translation: string;
   explanation: string;
   errors: string[];
@@ -35,56 +35,50 @@ export function AdminBulkImport({ token }: { token: string }) {
         setQuizzes(qz || []);
         setTemplates(ts || []);
         if (ts && ts.length > 0) {
-          setSelectedTemplateId(ts[0].id); // اختيار أول نموذج تلقائياً
+          setSelectedTemplateId(ts[0].id);
         }
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, [token]);
 
-  // دالة تنظيف الرموز السابقة (مثل "1.", "a)", "Answer: " الخ)
-  const cleanLineValue = (val: string, role: string): string => {
-    let text = val.trim();
-    if (role === "question_text") {
-      text = text.replace(/^(\d+[\.\)\-:]|Q\d+[:\.\)])\s*/i, "");
-    } else if (role.startsWith("answer_")) {
-      text = text.replace(/^[a-dأ-د١-٤][\.\)\-:]\s*/i, "");
-    } else if (role === "correct_answer") {
-      text = text.replace(/^(Answer|Correct|إجابة|الجواب|الحل)[:\s\-\.]*/i, "").trim();
-      // تحويل الأحرف أو الأرقام العربية إلى أحرف إنجليزية قياسية
-      const letter = text.charAt(0).toLowerCase();
-      if (letter === "أ" || letter === "ا" || letter === "1" || letter === "١") return "a";
-      if (letter === "ب" || letter === "2" || letter === "٢") return "b";
-      if (letter === "ج" || letter === "3" || letter === "٣") return "c";
-      if (letter === "د" || letter === "4" || letter === "٤") return "d";
-      if (["a", "b", "c", "d"].includes(letter)) return letter;
-    } else if (role === "explanation") {
-      text = text.replace(/^(Explanation|الشرح|التوضيح)[:\s\-\.]*/i, "");
-    } else if (role === "correct_answer_translation") {
-      text = text.replace(/^(Translation|ترجمة|ترجمة الحل)[:\s\-\.]*/i, "");
+  // دالة استخراج حرف الإجابة وتحويل الحروف العربية إن وجدت
+  const extractCorrectLetter = (line: string): "a" | "b" | "c" | "d" | "e" | null => {
+    // يبحث عن نمط مثل: "✅ الإجابة: b) answer" أو "Answer: c" أو "الإجابة: أ"
+    const match = line.match(/(?:✅|✔️|☑️|\*)?\s*(?:إجابة|الجواب|الإجابة|الحل|answer|correct)[\s:\-–—\.]*([a-eA-Eأ-ه])/i);
+    let letter = match ? match[1].toLowerCase() : null;
+
+    if (!letter) {
+      // محاولة البحث عن أول حرف خيار يتبعه قوس مثل "b)"
+      const fallback = line.match(/\b([a-eA-Eأ-ه])[\)\.]/i);
+      if (fallback) letter = fallback[1].toLowerCase();
     }
-    return text.trim();
+
+    if (letter === "أ" || letter === "ا") return "a";
+    if (letter === "ب") return "b";
+    if (letter === "ج") return "c";
+    if (letter === "د") return "d";
+    if (letter === "ه" || letter === "هـ") return "e";
+    if (["a", "b", "c", "d", "e"].includes(letter || "")) return letter as any;
+    return null;
   };
 
-  // معالجة وتحليل النص بناءً على النموذج المحدد
+  // معالجة وتحليل دفعة الأسئلة بالكامل
   const handleParse = () => {
     if (!rawText.trim()) {
       showToast("يرجى لصق نص الأسئلة أولاً", "error");
       return;
     }
 
-    // تقسيم النص إلى كتل أسئلة مفصولة بأسطر فارغة
+    // تقسيم النص إلى أسئلة مفصولة بسطر فارغ
     const blocks = rawText
       .trim()
       .split(/\n\s*\n+/)
       .map((b) => b.trim())
       .filter((b) => b.length > 0);
 
-    const chosenTemplate = templates.find((t) => t.id === selectedTemplateId);
-    const lineMapping: string[] = (chosenTemplate?.parsing_rules as any)?.line_mapping || [];
-
-    const parsedResults: ParsedQuestion[] = blocks.map((block, blockIndex) => {
-      const blockLines = block
+    const parsedResults: ParsedQuestion[] = blocks.map((block, bIdx) => {
+      const lines = block
         .split("\n")
         .map((l) => l.trim())
         .filter((l) => l.length > 0);
@@ -96,67 +90,95 @@ export function AdminBulkImport({ token }: { token: string }) {
         answer_b: "",
         answer_c: "",
         answer_d: "",
+        answer_e: "",
         correct_answer: "a",
         correct_answer_translation: "",
         explanation: "",
         errors: [],
       };
 
-      // إذا كان هناك نموذج محدد، نمشي سطر بسطر حسب المخطط
-      if (chosenTemplate && lineMapping.length > 0) {
-        blockLines.forEach((line, lineIdx) => {
-          const role = lineMapping[lineIdx];
-          if (!role || role === "ignore") return;
+      let state: "QUESTION" | "OPTIONS" | "AFTER_ANSWER" = "QUESTION";
 
-          const cleaned = cleanLineValue(line, role);
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const lower = line.toLowerCase();
 
-          if (role === "question_text") q.question_text = cleaned;
-          else if (role === "question_translation") q.question_translation = cleaned;
-          else if (role === "answer_a") q.answer_a = cleaned;
-          else if (role === "answer_b") q.answer_b = cleaned;
-          else if (role === "answer_c") q.answer_c = cleaned;
-          else if (role === "answer_d") q.answer_d = cleaned;
-          else if (role === "correct_answer") {
-            const letter = cleanLineValue(line, "correct_answer");
-            if (["a", "b", "c", "d"].includes(letter)) {
-              q.correct_answer = letter as any;
-            } else {
-              q.errors.push(`الإجابة الصحيحة غير واضحة (القيمة: "${line}")`);
-            }
-          } else if (role === "correct_answer_translation") q.correct_answer_translation = cleaned;
-          else if (role === "explanation") q.explanation = cleaned;
-        });
+        // 1. هل هذا سطر الإجابة الصحيحة؟
+        const isAnswerLine =
+          line.includes("✅") ||
+          line.includes("✔️") ||
+          /^(إجابة|الجواب|الإجابة|الحل|answer|correct)/i.test(line);
 
-        if (blockLines.length !== lineMapping.length) {
-          q.errors.push(`عدد أسطر هذا السؤال (${blockLines.length}) لا يطابق النموذج المحدد (${lineMapping.length} أسطر)`);
+        if (isAnswerLine) {
+          state = "AFTER_ANSWER";
+          const detectedLetter = extractCorrectLetter(line);
+          if (detectedLetter) {
+            q.correct_answer = detectedLetter;
+          } else {
+            q.errors.push(`لم نتمكن من تحديد حرف الإجابة في السطر: "${line}"`);
+          }
+          continue;
         }
-      } else {
-        // إذا لم يختر نموذجاً: تحليل تلقائي مرن
-        blockLines.forEach((line) => {
-          const lower = line.toLowerCase();
-          if (/^answer:?\s*([a-dأ-د])/i.test(line)) {
-            const m = line.match(/^answer:?\s*([a-dأ-د])/i);
-            const letter = m ? m[1].toLowerCase() : "a";
-            q.correct_answer = letter === "أ" ? "a" : letter === "ب" ? "b" : letter === "ج" ? "c" : letter === "د" ? "d" : (letter as any);
-          } else if (/^[aAأ][\.\)]\s*(.+)/.test(line)) {
-            q.answer_a = line.replace(/^[aAأ][\.\)]\s*/, "");
-          } else if (/^[bBب][\.\)]\s*(.+)/.test(line)) {
-            q.answer_b = line.replace(/^[bBب][\.\)]\s*/, "");
-          } else if (/^[cCج][\.\)]\s*(.+)/.test(line)) {
-            q.answer_c = line.replace(/^[cCج][\.\)]\s*/, "");
-          } else if (/^[dDد][\.\)]\s*(.+)/.test(line)) {
-            q.answer_d = line.replace(/^[dDد][\.\)]\s*/, "");
-          } else if (lower.startsWith("explanation:") || lower.startsWith("شرح:")) {
-            q.explanation = line.replace(/^(explanation|شرح):?\s*/i, "");
-          } else if (!q.question_text) {
-            q.question_text = line.replace(/^\d+[\.\)]\s*/, "");
+
+        // 2. هل هذا سطر أحد الخيارات؟ (A, B, C, D, E)
+        const optionMatch = line.match(/^([a-eA-Eأ-ه])[\)\.\-:\s]\s*(.+)$/i);
+        if (state !== "AFTER_ANSWER" && optionMatch) {
+          state = "OPTIONS";
+          let opt = optionMatch[1].toLowerCase();
+          if (opt === "أ" || opt === "ا") opt = "a";
+          else if (opt === "ب") opt = "b";
+          else if (opt === "ج") opt = "c";
+          else if (opt === "د") opt = "d";
+          else if (opt === "ه" || opt === "هـ") opt = "e";
+
+          const val = optionMatch[2].trim();
+          if (opt === "a") q.answer_a = val;
+          else if (opt === "b") q.answer_b = val;
+          else if (opt === "c") q.answer_c = val;
+          else if (opt === "d") q.answer_d = val;
+          else if (opt === "e") q.answer_e = val;
+          continue;
+        }
+
+        // 3. أسطر ما بعد الإجابة الصحيحة (ترجمة الجواب أو الشرح)
+        if (state === "AFTER_ANSWER") {
+          if (lower.startsWith("explanation:") || lower.startsWith("شرح:") || lower.startsWith("توضيح:")) {
+            q.explanation = line.replace(/^(explanation|شرح|توضيح)[\s:\-–—\.]*/i, "").trim();
+          } else if (
+            lower.startsWith("translation:") ||
+            lower.startsWith("ترجمة:") ||
+            lower.startsWith("ترجمه:") ||
+            lower.startsWith("ترجمه الجواب") ||
+            lower.startsWith("ترجمة الجواب") ||
+            lower.startsWith("ترجمة الحل")
+          ) {
+            q.correct_answer_translation = line
+              .replace(/^(translation|ترجمة|ترجمه|ترجمه الجواب|ترجمة الجواب|ترجمة الحل)[\s:\-–—\.]*/i, "")
+              .trim();
+          } else if (!q.correct_answer_translation) {
+            q.correct_answer_translation = line;
+          } else if (!q.explanation) {
+            q.explanation = line;
+          } else {
+            q.explanation += " " + line;
+          }
+          continue;
+        }
+
+        // 4. أسطر السؤال وترجمته (قبل الخيارات)
+        if (state === "QUESTION") {
+          if (!q.question_text) {
+            // إزالة الترقيم مثل "1." أو "1.a" أو "1) "
+            q.question_text = line.replace(/^\s*\d+[\.\)\-:]\s*/, "").trim();
           } else if (!q.question_translation) {
             q.question_translation = line;
+          } else {
+            q.question_translation += " " + line;
           }
-        });
+        }
       }
 
-      // فحص الأخطاء والحقول الإلزامية
+      // التحقق من الحقول الأساسية
       if (!q.question_text) q.errors.push("نص السؤال مفقود");
       if (!q.answer_a) q.errors.push("الخيار A مفقود");
       if (!q.answer_b) q.errors.push("الخيار B مفقود");
@@ -167,14 +189,14 @@ export function AdminBulkImport({ token }: { token: string }) {
     });
 
     setParsed(parsedResults);
-    const validCount = parsedResults.filter((p) => p.errors.length === 0).length;
-    showToast(`تم التعرف على ${parsedResults.length} سؤال (${validCount} جاهز للاستيراد)`);
+    const valid = parsedResults.filter((p) => p.errors.length === 0).length;
+    showToast(`تم التعرف على ${parsedResults.length} سؤال (${valid} جاهز للاستيراد)`);
   };
 
-  // استيراد الأسئلة الصالحة دفعة واحدة
+  // استيراد الأسئلة الصالحة إلى الاختبار
   const handleImport = async () => {
     if (!selectedQuiz) {
-      showToast("يرجى اختيار الاختبار الهدف أولاً", "error");
+      showToast("يرجى اختيار الاختبار أولاً", "error");
       return;
     }
 
@@ -186,21 +208,28 @@ export function AdminBulkImport({ token }: { token: string }) {
 
     setImporting(true);
     try {
-      const payload = validQuestions.map((q, idx) => ({
-        quiz_id: selectedQuiz,
-        question_text: q.question_text,
-        question_translation: q.question_translation || "",
-        answer_a: q.answer_a,
-        answer_b: q.answer_b,
-        answer_c: q.answer_c,
-        answer_d: q.answer_d,
-        correct_answer: q.correct_answer,
-        correct_answer_translation: q.correct_answer_translation || "",
-        explanation: q.explanation || "",
-        sort_order: idx + 1,
-        is_enabled: true,
-        is_visible: true,
-      }));
+      const payload = validQuestions.map((q, idx) => {
+        const item: any = {
+          quiz_id: selectedQuiz,
+          question_text: q.question_text,
+          question_translation: q.question_translation || "",
+          answer_a: q.answer_a,
+          answer_b: q.answer_b,
+          answer_c: q.answer_c,
+          answer_d: q.answer_d,
+          correct_answer: q.correct_answer,
+          correct_answer_translation: q.correct_answer_translation || "",
+          explanation: q.explanation || "",
+          sort_order: idx + 1,
+          is_enabled: true,
+          is_visible: true,
+        };
+        // إضافة الخيار E فقط إذا كان السؤال يحتوي عليه
+        if (q.answer_e && q.answer_e.trim()) {
+          item.answer_e = q.answer_e.trim();
+        }
+        return item;
+      });
 
       await adminApi.bulkImportQuestions(token, payload);
       showToast(`تم استيراد ${validQuestions.length} سؤال بنجاح!`);
@@ -217,7 +246,6 @@ export function AdminBulkImport({ token }: { token: string }) {
 
   const validCount = parsed.filter((p) => p.errors.length === 0).length;
   const invalidCount = parsed.length - validCount;
-  const currentTemplate = templates.find((t) => t.id === selectedTemplateId);
 
   return (
     <div className="space-y-6 animate-fadeIn text-right">
@@ -226,18 +254,18 @@ export function AdminBulkImport({ token }: { token: string }) {
           <Upload className="w-5 h-5 text-teal-400" /> الاستيراد السريع للأسئلة (Bulk Import)
         </h2>
         <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-          اختر الاختبار والنموذج الذي يناسب تنسيق أسئلتك، ثم الصق النص ليقوم النظام بفرز الخيارات والأجوبة آلياً وإضافتها بنقرة زر.
+          يدعم النظام تلقائياً أسلوبك: نص السؤال، ترجمته، 4 أو 5 خيارات، وعلامة الإجابة الصحيحة مع ترجمتها.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-1.5">1. الاختبار المستهدف (Target Quiz)</label>
+            <label className="block text-sm font-semibold text-slate-300 mb-1.5">1. الاختبار المستهدف</label>
             <select
               className="input-field"
               value={selectedQuiz}
               onChange={(e) => setSelectedQuiz(e.target.value)}
             >
-              <option value="">-- اختر الاختبار لتخزين الأسئلة فيه --</option>
+              <option value="">-- اختر الاختبار المستهدف --</option>
               {quizzes.map((q) => (
                 <option key={q.id} value={q.id}>
                   {q.name}
@@ -247,42 +275,42 @@ export function AdminBulkImport({ token }: { token: string }) {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-1.5">2. نموذج التنسيق (Question Template)</label>
-            <select
-              className="input-field"
-              value={selectedTemplateId}
-              onChange={(e) => setSelectedTemplateId(e.target.value)}
-            >
-              <option value="">التعرف التلقائي الذكي (بدون نموذج)</option>
-              {templates.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} ({(t.parsing_rules as any)?.line_mapping?.length || 0} أسطر)
-                </option>
-              ))}
-            </select>
+            <label className="block text-sm font-semibold text-slate-300 mb-1.5">2. وضع المعالجة</label>
+            <div className="input-field flex items-center justify-between text-xs text-teal-300 bg-slate-900">
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-teal-400" /> نظام التعرف الذكي (4 و 5 خيارات تلقائياً)
+              </span>
+              <span className="text-slate-500 font-mono">نشط</span>
+            </div>
           </div>
         </div>
 
-        {/* ملخص هيكل النموذج المختار */}
-        {currentTemplate && (
-          <div className="mb-4 p-3 bg-slate-900 rounded-lg border border-slate-800 flex items-center justify-between text-xs text-slate-400">
-            <span className="flex items-center gap-1.5 text-teal-400 font-medium">
-              <Sparkles className="w-4 h-4" /> النموذج يحدد {((currentTemplate.parsing_rules as any)?.line_mapping || []).length} أسطر لكل سؤال
-            </span>
-            <span>افصل بين كل سؤال والذي يليه بسطر فارغ واحد</span>
-          </div>
-        )}
-
         <div className="mb-4">
-          <label className="block text-sm font-semibold text-slate-300 mb-1.5">3. الصق مجموعة الأسئلة هنا</label>
+          <label className="block text-sm font-semibold text-slate-300 mb-1.5">3. الصق قائمة الأسئلة هنا</label>
           <textarea
             className="input-field font-mono text-xs leading-relaxed text-left"
             dir="ltr"
             rows={12}
             value={rawText}
             onChange={(e) => setRawText(e.target.value)}
-            placeholder="الصق كل الأسئلة هنا مع ترك سطر فارغ بين كل سؤال والآخر..."
+            placeholder={`1.a question?
+ترجمة السؤال
+a) to choose
+b) to choose
+c) to choose
+d) to choose
+✅ الإجابة: b) answer
+ترجمه الجواب
+
+2.second question?
+a) option A
+b) option B
+c) option C
+d) option D
+e) option E
+✅ الإجابة: c) answer`}
           />
+          <p className="text-[11px] text-slate-500 mt-1">تأكد من ترك سطر فارغ بين كل سؤال والآخر.</p>
         </div>
 
         <button onClick={handleParse} className="btn-secondary flex items-center gap-2 text-sm font-semibold">
@@ -290,13 +318,12 @@ export function AdminBulkImport({ token }: { token: string }) {
         </button>
       </div>
 
-      {/* نتائج التحليل والمعاينة */}
       {parsed.length > 0 && (
         <div className="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
             <div>
               <h3 className="font-bold text-slate-100 text-base">معاينة الأسئلة المستخرجة ({parsed.length})</h3>
-              <p className="text-xs text-slate-400 mt-0.5">تأكد من صحة الحقول قبل الإضافة النهائية</p>
+              <p className="text-xs text-slate-400 mt-0.5">راجع الأسئلة قبل إضافتها للاختبار</p>
             </div>
             <div className="flex items-center gap-3 text-xs font-semibold">
               <span className="text-green-400 flex items-center gap-1 bg-green-950/60 px-2.5 py-1 rounded-full border border-green-800/60">
@@ -323,7 +350,7 @@ export function AdminBulkImport({ token }: { token: string }) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <span className="font-bold text-teal-400 font-mono text-xs block mb-1">السؤال #{idx + 1}</span>
-                      <p className="font-semibold text-slate-100">{q.question_text || "(بدون نص)"}</p>
+                      <p className="font-semibold text-slate-100 text-left" dir="ltr">{q.question_text || "(بدون نص)"}</p>
                       {q.question_translation && (
                         <p className="text-xs text-blue-400 mt-1">{q.question_translation}</p>
                       )}
@@ -333,8 +360,7 @@ export function AdminBulkImport({ token }: { token: string }) {
                     </span>
                   </div>
 
-                  {/* الخيارات */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-800/60 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-800/60 text-xs text-left" dir="ltr">
                     <span className={`p-1.5 rounded bg-slate-950 font-mono ${q.correct_answer === "a" ? "text-green-400 font-bold" : "text-slate-300"}`}>
                       A: {q.answer_a || "---"}
                     </span>
@@ -347,17 +373,20 @@ export function AdminBulkImport({ token }: { token: string }) {
                     <span className={`p-1.5 rounded bg-slate-950 font-mono ${q.correct_answer === "d" ? "text-green-400 font-bold" : "text-slate-300"}`}>
                       D: {q.answer_d || "---"}
                     </span>
+                    {q.answer_e && (
+                      <span className={`p-1.5 rounded bg-slate-950 font-mono sm:col-span-2 ${q.correct_answer === "e" ? "text-green-400 font-bold" : "text-slate-300"}`}>
+                        E: {q.answer_e}
+                      </span>
+                    )}
                   </div>
 
-                  {/* الشرح وترجمة الحل */}
-                  {(q.explanation || q.correct_answer_translation) && (
+                  {(q.correct_answer_translation || q.explanation) && (
                     <div className="mt-2 text-xs text-slate-400 space-y-0.5 bg-slate-950/50 p-2 rounded">
                       {q.correct_answer_translation && <p><strong className="text-slate-300">ترجمة الحل:</strong> {q.correct_answer_translation}</p>}
                       {q.explanation && <p><strong className="text-slate-300">الشرح:</strong> {q.explanation}</p>}
                     </div>
                   )}
 
-                  {/* الأخطاء إن وجدت */}
                   {hasErrors && (
                     <div className="mt-3 p-2 bg-red-950/40 rounded border border-red-800/40 text-xs text-red-300 space-y-1">
                       {q.errors.map((err, eIdx) => (
@@ -384,7 +413,7 @@ export function AdminBulkImport({ token }: { token: string }) {
               ) : (
                 <>
                   <Upload className="w-4 h-4" />
-                  <span>استيراد ({validCount}) سؤال صالح الآن</span>
+                  <span>استيراد ({validCount}) سؤال إلى الاختبار</span>
                 </>
               )}
             </button>
