@@ -24,24 +24,7 @@ interface ResultProps {
 
 export function QuizResult({ quiz, result, onHome, onRetry }: ResultProps) {
   const [showReview, setShowReview] = useState(false);
-  const [reviewData, setReviewData] = useState<null | {
-    answers: Array<{
-      id: string;
-      student_answer: string | null;
-      correct_answer: string;
-      is_correct: boolean;
-      questions: {
-        question_text: string;
-        question_translation: string;
-        answer_a: string;
-        answer_b: string;
-        answer_c: string;
-        answer_d: string;
-        correct_answer_translation: string;
-        explanation: string;
-      };
-    }>;
-  }>(null);
+  const [reviewData, setReviewData] = useState<any>(null);
 
   const canReview = quiz.review_wrong_answers && !result.is_100 && result.wrong > 0;
 
@@ -62,166 +45,147 @@ export function QuizResult({ quiz, result, onHome, onRetry }: ResultProps) {
   };
 
   if (showReview && reviewData) {
-    const wrongAnswers = reviewData.answers.filter(a => !a.is_correct);
+    const wrongAnswers = reviewData.answers?.filter((a: any) => !a.is_correct) || [];
     return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="bg-white border-b border-slate-200 sticky top-0 z-20">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+        <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-20">
           <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-            <h1 className="font-semibold text-slate-800">Review Wrong Answers</h1>
-            <button onClick={() => setShowReview(false)} className="btn-ghost">Back to Results</button>
+            <h1 className="font-bold text-slate-900 dark:text-white">مراجعة الإجابات الخاطئة</h1>
+            <button onClick={() => setShowReview(false)} className="btn-ghost">
+              العودة للنتيجة
+            </button>
           </div>
         </div>
-
         <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-          {wrongAnswers.map((a, i) => {
+          {wrongAnswers.map((a: any, i: number) => {
             const q = a.questions;
             const answers = [
-              { key: "a", text: q.answer_a },
-              { key: "b", text: q.answer_b },
-              { key: "c", text: q.answer_c },
-              { key: "d", text: q.answer_d },
-            ...((q as any).answer_e ? [{ key: "e", text: (q as any).answer_e }] : []),
-  ];
+              { key: "a", text: q?.answer_a },
+              { key: "b", text: q?.answer_b },
+              { key: "c", text: q?.answer_c },
+              { key: "d", text: q?.answer_d },
+              ...(q?.answer_e && q.answer_e.trim() ? [{ key: "e", text: q.answer_e }] : []),
+            ];
             return (
-              <div key={a.id} className="card p-6 animate-fadeIn">
+              <div key={a.id} className="card p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm text-left" dir="ltr">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="badge bg-red-100 text-red-700">Question {i + 1}</span>
+                  <span className="badge bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400">سؤال {i + 1}</span>
                   <XCircle className="w-4 h-4 text-red-500" />
                 </div>
-                <h3 className="font-semibold text-slate-800 mb-4">{q.question_text}</h3>
-
-                {quiz.show_translations && q.question_translation && (
-                  <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                    <p className="text-sm text-blue-800">{q.question_translation}</p>
+                <h3 className="font-bold text-slate-900 dark:text-white mb-4 leading-relaxed">{q?.question_text}</h3>
+                {quiz.show_translations && q?.question_translation && (
+                  <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-900 text-right" dir="rtl">
+                    <p className="text-sm text-blue-900 dark:text-blue-300">{q.question_translation}</p>
                   </div>
                 )}
-
                 <div className="space-y-2">
-                  {answers.map(ans => {
+                  {answers.map((ans) => {
                     const isCorrect = ans.key === a.correct_answer;
                     const isStudentWrong = ans.key === a.student_answer;
-                    let cls = "border-slate-200 opacity-60";
-                    if (isCorrect) cls = "border-green-500 bg-green-50";
-                    else if (isStudentWrong) cls = "border-red-500 bg-red-50";
+                    let cls = "border-slate-200 dark:border-slate-800 opacity-60 text-slate-600 dark:text-slate-400";
+                    if (isCorrect) cls = "border-green-500 bg-green-50 dark:bg-green-950/40 text-green-900 dark:text-green-200 opacity-100 font-medium";
+                    else if (isStudentWrong) cls = "border-red-500 bg-red-50 dark:bg-red-950/40 text-red-900 dark:text-red-200 opacity-100 font-medium";
                     return (
-                      <div key={ans.key} className={`p-3 rounded-lg border-2 flex items-center gap-3 ${cls}`}>
-                        <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-semibold text-sm flex-shrink-0 ${
-                          isCorrect ? "bg-green-500 text-white" : isStudentWrong ? "bg-red-500 text-white" : "bg-slate-100 text-slate-500"
+                      <div key={ans.key} className={`p-3 rounded-xl border-2 flex items-center gap-3 ${cls}`}>
+                        <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${
+                          isCorrect ? "bg-green-500 text-white" : isStudentWrong ? "bg-red-500 text-white" : "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
                         }`}>
                           {ans.key.toUpperCase()}
                         </span>
-                        <span className="text-slate-700 flex-1">{ans.text}</span>
+                        <span className="flex-1">{ans.text}</span>
                         {isCorrect && <CheckCircle2 className="w-5 h-5 text-green-600" />}
                         {isStudentWrong && <XCircle className="w-5 h-5 text-red-600" />}
                       </div>
                     );
                   })}
                 </div>
-
-                {quiz.show_translations && q.correct_answer_translation && (
-                  <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                    <p className="text-sm text-blue-800"><strong>Translation:</strong> {q.correct_answer_translation}</p>
+                {quiz.show_translations && q?.correct_answer_translation && (
+                  <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-900 text-right" dir="rtl">
+                    <p className="text-sm text-blue-900 dark:text-blue-300"><strong>ترجمة الحل:</strong> {q.correct_answer_translation}</p>
                   </div>
                 )}
-                {quiz.show_explanations && q.explanation && (
-                  <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-100">
-                    <p className="text-sm text-amber-800"><strong>Explanation:</strong> {q.explanation}</p>
+                {quiz.show_explanations && q?.explanation && (
+                  <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-900 text-right" dir="rtl">
+                    <p className="text-sm text-amber-900 dark:text-amber-300"><strong>الشرح:</strong> {q.explanation}</p>
                   </div>
                 )}
               </div>
             );
           })}
-
           <div className="flex gap-3">
-            <button onClick={onHome} className="btn-secondary flex items-center gap-2">
-              <Home className="w-5 h-5" /> Home
-            </button>
-            <button onClick={onRetry} className="btn-primary flex items-center gap-2">
-              <RotateCcw className="w-5 h-5" /> Try Again
-            </button>
+            <button onClick={onHome} className="btn-secondary flex-1">الرئيسية</button>
+            <button onClick={onRetry} className="btn-primary flex-1">إعادة المحاولة</button>
           </div>
         </div>
       </div>
     );
   }
 
-  const grade = result.percentage >= 90 ? "Excellent" : result.percentage >= 75 ? "Good" : result.percentage >= 50 ? "Fair" : "Keep Practicing";
-  const gradeColor = result.percentage >= 90 ? "text-green-600" : result.percentage >= 75 ? "text-teal-600" : result.percentage >= 50 ? "text-amber-600" : "text-red-500";
+  const grade = result.percentage >= 90 ? "ممتاز جداً" : result.percentage >= 75 ? "جيد جداً" : result.percentage >= 50 ? "مقبول" : "تحتاج إلى تدريب";
+  const gradeColor = result.percentage >= 90 ? "text-green-500" : result.percentage >= 75 ? "text-teal-400" : result.percentage >= 50 ? "text-amber-400" : "text-red-400";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-teal-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex items-center justify-center p-4 transition-colors">
       <div className="w-full max-w-lg">
-        <div className="card p-8 text-center animate-fadeIn">
-          {/* Score Circle */}
+        <div className="card p-8 text-center animate-fadeIn bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl">
           <div className="relative w-40 h-40 mx-auto mb-6">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 144 144">
-              <circle cx="72" cy="72" r="64" fill="none" stroke="#e2e8f0" strokeWidth="12" />
+              <circle cx="72" cy="72" r="64" fill="none" stroke="#334155" strokeWidth="12" />
               <circle
-                cx="72" cy="72" r="64" fill="none" stroke="#0d9488" strokeWidth="12"
+                cx="72"
+                cy="72"
+                r="64"
+                fill="none"
+                stroke="#0d9488"
+                strokeWidth="12"
                 strokeDasharray={`${(result.percentage / 100) * 402} 402`}
                 strokeLinecap="round"
                 className="transition-all duration-1000"
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={`text-4xl font-bold ${gradeColor}`}>{result.percentage}%</span>
-              <span className="text-xs text-slate-500 mt-1">Score</span>
+              <span className={`text-4xl font-extrabold ${gradeColor}`}>{result.percentage}%</span>
+              <span className="text-xs text-slate-400 mt-1">الدرجة</span>
             </div>
-            {result.is_100 && (
-              <div className="absolute -top-2 -right-2">
-                <Star className="w-8 h-8 text-amber-400 fill-amber-400" />
-              </div>
-            )}
           </div>
-
           <h2 className={`text-2xl font-bold ${gradeColor} mb-2`}>{grade}</h2>
-          <p className="text-slate-500 mb-6">{quiz.name}</p>
+          <p className="text-slate-500 dark:text-slate-400 mb-6">{quiz.name}</p>
 
-          {/* Stats grid */}
           <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className="p-4 bg-green-50 rounded-xl border border-green-100">
-              <CheckCircle2 className="w-6 h-6 text-green-600 mx-auto mb-1" />
-              <p className="text-2xl font-bold text-green-700">{result.correct}</p>
-              <p className="text-xs text-green-600">Correct</p>
+            <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-xl border border-green-200 dark:border-green-900/50">
+              <CheckCircle2 className="w-6 h-6 text-green-500 mx-auto mb-1" />
+              <p className="text-2xl font-bold text-green-600 dark:text-green-400">{result.correct}</p>
+              <p className="text-xs text-green-600 dark:text-green-300">صحيحة</p>
             </div>
-            <div className="p-4 bg-red-50 rounded-xl border border-red-100">
+            <div className="p-4 bg-red-50 dark:bg-red-950/30 rounded-xl border border-red-200 dark:border-red-900/50">
               <XCircle className="w-6 h-6 text-red-500 mx-auto mb-1" />
-              <p className="text-2xl font-bold text-red-600">{result.wrong}</p>
-              <p className="text-xs text-red-500">Wrong</p>
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{result.wrong}</p>
+              <p className="text-xs text-red-600 dark:text-red-300">خاطئة</p>
             </div>
-            <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+            <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-900/50">
               <Trophy className="w-6 h-6 text-amber-500 mx-auto mb-1" />
-              <p className="text-2xl font-bold text-amber-700">{result.total_score.toFixed(1)}</p>
-              <p className="text-xs text-amber-600">Points Earned</p>
+              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{result.total_score.toFixed(1)}</p>
+              <p className="text-xs text-amber-600 dark:text-amber-300">النقاط المكتسبة</p>
             </div>
-            <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+            <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-900/50">
               <Clock className="w-6 h-6 text-blue-500 mx-auto mb-1" />
-              <p className="text-2xl font-bold text-blue-700">{formatTime(result.completion_time)}</p>
-              <p className="text-xs text-blue-600">Time</p>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{formatTime(result.completion_time)}</p>
+              <p className="text-xs text-blue-600 dark:text-blue-300">الوقت المستغرق</p>
             </div>
           </div>
 
-          {result.timed_bonus > 0 && (
-            <div className="flex items-center justify-center gap-2 mb-4 p-3 bg-teal-50 rounded-lg">
-              <Award className="w-5 h-5 text-teal-600" />
-              <p className="text-sm text-teal-700">Timed mode bonus: +{result.timed_bonus} points</p>
-            </div>
-          )}
-
-          {/* Action buttons */}
           <div className="space-y-3">
             {canReview && (
-              <button onClick={handleReview} className="btn-secondary w-full flex items-center justify-center gap-2">
-                Review Wrong Answers
-                <ArrowRight className="w-5 h-5" />
+              <button onClick={handleReview} className="btn-secondary w-full py-2.5">
+                مراجعة الإجابات الخاطئة
               </button>
             )}
             <div className="flex gap-3">
-              <button onClick={onHome} className="btn-secondary flex-1 flex items-center justify-center gap-2">
-                <Home className="w-5 h-5" /> Home
+              <button onClick={onHome} className="btn-secondary flex-1">
+                الرئيسية
               </button>
-              <button onClick={onRetry} className="btn-primary flex-1 flex items-center justify-center gap-2">
-                <RotateCcw className="w-5 h-5" /> Try Again
+              <button onClick={onRetry} className="btn-primary flex-1">
+                إعادة المحاولة
               </button>
             </div>
           </div>
