@@ -86,6 +86,7 @@ export interface Question {
   answer_b: string;
   answer_c: string;
   answer_d: string;
+  answer_e?: string;
   correct_answer: "a" | "b" | "c" | "d" | "e";
   correct_answer_translation: string;
   explanation: string;
