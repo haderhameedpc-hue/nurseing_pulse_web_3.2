@@ -416,6 +416,25 @@ Deno.serve(async (req: Request) => {
     }
 
     // ─── STUDENTS (admin view) ───────────────────────────
+    if (path.startsWith("/students/") && req.method === "DELETE") {
+      const id = path.split("/")[2];
+      // 1. حذف الإجابات المرتبطة بمحاولات الطالب
+      const { data: attempts } = await supabase.from("quiz_attempts").select("id").eq("student_id", id);
+      if (attempts && attempts.length > 0) {
+        const attIds = attempts.map(a => a.id);
+        await supabase.from("attempt_answers").delete().in("attempt_id", attIds);
+      }
+      // 2. حذف المحاولات
+      await supabase.from("quiz_attempts").delete().eq("student_id", id);
+      // 3. حذف الأوسمة وسجل تغيير الاسم
+      await supabase.from("student_achievements").delete().eq("student_id", id);
+      await supabase.from("name_change_history").delete().eq("student_id", id);
+      // 4. حذف حساب الطالب نفسه
+      const { error } = await supabase.from("students").delete().eq("id", id);
+      if (error) return json({ error: error.message }, 500);
+      await logAction("delete_student", id, {});
+      return json({ success: true });
+    }
     if (path === "/students" && req.method === "GET") {
       const search = url.searchParams.get("search");
       let q = supabase.from("students").select("*").order("created_at", { ascending: false });
