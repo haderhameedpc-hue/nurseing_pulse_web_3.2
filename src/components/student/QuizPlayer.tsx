@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Clock, CheckCircle2, XCircle, ArrowRight, X, Globe, Lightbulb, Timer } from "lucide-react";
+import { CheckCircle2, XCircle, ArrowRight, X, Globe, Lightbulb, Timer } from "lucide-react";
 import type { Quiz, Question } from "@/lib/api";
 import { studentApi } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 interface QuizPlayerProps {
   quiz: Quiz;
   studentId: string;
   mode: "timed" | "untimed";
-  onComplete: (result: { attempt_id: string; correct: number; wrong: number; total: number; percentage: number; earned_points: number; timed_bonus: number; total_score: number; max_score: number; is_100: boolean; completion_time: number; answers: Record<string, { answer: string; time_spent: number }> }) => void;
+  onComplete: (result: any) => void;
   onExit: () => void;
 }
 
@@ -25,36 +26,31 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
   const answersRef = useRef<Record<string, { answer: string; time_spent: number }>>({});
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // جلب الأسئلة كاملة بما فيها الخيار E مباشرة من Supabase
   useEffect(() => {
-    studentApi.getQuiz(quiz.id).then(data => {
-      setQuestions(data.questions);
-      setLoading(false);
-    }).catch(() => {
-      setError("Failed to load quiz questions.");
-      setLoading(false);
-    });
-  }, [quiz.id]);
+    async function fetchQuestions() {
+      try {
+        const { data, error: qErr } = await supabase
+          .from("questions")
+          .select("*")
+          .eq("quiz_id", quiz.id)
+          .eq("is_enabled", true)
+          .eq("is_visible", true)
+          .order("sort_order");
 
-  // Countdown timer for timed mode
-  useEffect(() => {
-    if (mode !== "timed" || showFeedback || loading || submitting) return;
-    timerRef.current = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current!);
-          // Time expired — show correct answer, lock interaction
-          handleTimeExpired();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [currentIdx, showFeedback, mode, loading, submitting]);
+        if (qErr) throw qErr;
+        setQuestions(data || []);
+        setLoading(false);
+      } catch (err: any) {
+        setError(err.message || "فشل في تحميل الأسئلة.");
+        setLoading(false);
+      }
+    }
+    fetchQuestions();
+  }, [quiz.id]);
 
   const handleTimeExpired = useCallback(() => {
     setShowFeedback(true);
-    // Record no answer for this question
     const q = questions[currentIdx];
     if (q && !answersRef.current[q.id]) {
       const elapsed = Math.floor((Date.now() - questionStartTime) / 1000);
@@ -62,13 +58,29 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
     }
   }, [currentIdx, questions, questionStartTime]);
 
+  useEffect(() => {
+    if (mode !== "timed" || showFeedback || loading || submitting) return;
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current!);
+          handleTimeExpired();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [currentIdx, showFeedback, mode, loading, submitting, handleTimeExpired]);
+
   const handleSelectAnswer = (answer: string) => {
     if (showFeedback) return;
     setSelectedAnswer(answer);
     const q = questions[currentIdx];
     const elapsed = Math.floor((Date.now() - questionStartTime) / 1000);
     answersRef.current[q.id] = { answer, time_spent: elapsed };
-
     if (quiz.immediate_feedback) {
       setShowFeedback(true);
       if (timerRef.current) clearInterval(timerRef.current);
@@ -83,7 +95,6 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
       setTimeLeft(quiz.time_limit_seconds);
       setQuestionStartTime(Date.now());
     } else {
-      // Quiz complete — submit
       await submitQuiz();
     }
   };
@@ -113,30 +124,29 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
         completion_time: result.completion_time_seconds,
         answers: answersRef.current,
       });
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: any) {
+      setError(err.message || "فشل إرسال الإجابات.");
       setSubmitting(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <span className="w-8 h-8 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin inline-block mb-3" />
-          <p className="text-slate-500">Loading quiz...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <span className="w-8 h-8 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
       </div>
     );
   }
 
   if (error && !submitting) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <div className="card p-8 max-w-md text-center">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
+        <div className="card p-8 max-w-md text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
           <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <p className="text-slate-700 mb-4">{error}</p>
-          <button onClick={onExit} className="btn-primary">Back to Home</button>
+          <p className="text-slate-800 dark:text-slate-200 mb-4">{error}</p>
+          <button onClick={onExit} className="btn-primary">
+            العودة للرئيسية
+          </button>
         </div>
       </div>
     );
@@ -144,10 +154,12 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
 
   if (questions.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <div className="card p-8 max-w-md text-center">
-          <p className="text-slate-700 mb-4">This quiz has no questions yet.</p>
-          <button onClick={onExit} className="btn-primary">Back to Home</button>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
+        <div className="card p-8 max-w-md text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+          <p className="text-slate-800 dark:text-slate-200 mb-4">لا توجد أسئلة في هذا الاختبار بعد.</p>
+          <button onClick={onExit} className="btn-primary">
+            العودة
+          </button>
         </div>
       </div>
     );
@@ -155,12 +167,14 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
 
   const q = questions[currentIdx];
   const isCorrect = selectedAnswer === q.correct_answer;
+
+  // دعم الخيارات من A إلى E
   const answers = [
     { key: "a", text: q.answer_a },
     { key: "b", text: q.answer_b },
     { key: "c", text: q.answer_c },
     { key: "d", text: q.answer_d },
-  ...(q.answer_e ? [{ key: "e", text: q.answer_e }] : []),
+    ...(q.answer_e && q.answer_e.trim() ? [{ key: "e", text: q.answer_e }] : []),
   ];
 
   const formatTime = (s: number) => {
@@ -170,57 +184,78 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-20">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+      {/* الشريط العلوي */}
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-20">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <h1 className="font-semibold text-slate-800 truncate">{quiz.name}</h1>
-            <p className="text-xs text-slate-500">Question {currentIdx + 1} of {questions.length}</p>
+          <div className="flex-1 min-w-0 text-right">
+            <h1 className="font-bold text-slate-900 dark:text-white truncate text-base">{quiz.name}</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              السؤال {currentIdx + 1} من {questions.length}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             {mode === "timed" && (
-              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono font-bold text-sm ${timeLeft <= 10 ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-700"}`}>
+              <div
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono font-bold text-sm ${
+                  timeLeft <= 10
+                    ? "bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-400"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                }`}
+              >
                 <Timer className="w-4 h-4" />
                 {formatTime(timeLeft)}
               </div>
             )}
-            <button onClick={onExit} className="btn-ghost p-2" title="Exit quiz">
-              <X className="w-5 h-5" />
+            <button onClick={onExit} className="btn-ghost p-2" title="الخروج من الاختبار">
+              <X className="w-5 h-5 text-slate-500 hover:text-slate-900 dark:hover:text-white" />
             </button>
           </div>
         </div>
-        {/* Progress bar */}
-        <div className="h-1 bg-slate-100">
-          <div className="h-full bg-teal-600 transition-all duration-300" style={{ width: `${((currentIdx + (showFeedback ? 1 : 0)) / questions.length) * 100}%` }} />
+        <div className="h-1.5 bg-slate-100 dark:bg-slate-800">
+          <div
+            className="h-full bg-teal-600 transition-all duration-300"
+            style={{ width: `${((currentIdx + (showFeedback ? 1 : 0)) / questions.length) * 100}%` }}
+          />
         </div>
       </div>
 
-      {/* Question */}
+      {/* بطاقة السؤال والخيارات */}
       <div className="max-w-3xl mx-auto px-4 py-8">
-        <div className="card p-6 md:p-8 animate-fadeIn" key={currentIdx}>
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-slate-800 leading-relaxed">{q.question_text}</h2>
-            {quiz.show_translations && q.question_translation && showFeedback && (
-              <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100 animate-fadeIn">
-                <Globe className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-blue-800">{q.question_translation}</p>
+        <div
+          className="card p-6 md:p-8 animate-fadeIn bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg rounded-2xl"
+          key={currentIdx}
+        >
+          <div className="mb-6 text-left" dir="ltr">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-relaxed">{q.question_text}</h2>
+            {quiz.show_translations && q.question_translation && (
+              <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-900 text-right" dir="rtl">
+                <Globe className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-blue-900 dark:text-blue-300 leading-relaxed">{q.question_translation}</p>
               </div>
             )}
           </div>
 
-          {/* Answers */}
-          <div className="space-y-3">
-            {answers.map(ans => {
+          {/* الخيارات A, B, C, D, E */}
+          <div className="space-y-3" dir="ltr">
+            {answers.map((ans) => {
               const isSelected = selectedAnswer === ans.key;
               const isCorrectAns = ans.key === q.correct_answer;
-              let cls = "border-slate-200 hover:border-teal-300 hover:bg-teal-50/30";
+              let cls =
+                "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 hover:border-teal-500 dark:hover:border-teal-500 text-slate-800 dark:text-slate-200";
+
               if (showFeedback) {
-                if (isCorrectAns) cls = "border-green-500 bg-green-50";
-                else if (isSelected) cls = "border-red-500 bg-red-50";
-                else cls = "border-slate-200 opacity-60";
+                if (isCorrectAns)
+                  cls =
+                    "border-green-500 bg-green-50 dark:bg-green-950/40 text-green-900 dark:text-green-200";
+                else if (isSelected)
+                  cls =
+                    "border-red-500 bg-red-50 dark:bg-red-950/40 text-red-900 dark:text-red-200";
+                else
+                  cls =
+                    "border-slate-200 dark:border-slate-800 opacity-50 text-slate-500 dark:text-slate-500";
               } else if (isSelected) {
-                cls = "border-teal-500 bg-teal-50";
+                cls = "border-teal-500 bg-teal-50 dark:bg-teal-950/40 text-teal-900 dark:text-teal-200";
               }
 
               return (
@@ -228,72 +263,81 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
                   key={ans.key}
                   onClick={() => handleSelectAnswer(ans.key)}
                   disabled={showFeedback}
-                  className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center gap-3 ${cls} ${showFeedback ? "cursor-default" : "cursor-pointer"}`}
+                  className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center gap-3 ${cls} ${
+                    showFeedback ? "cursor-default" : "cursor-pointer"
+                  }`}
                 >
-                  <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-semibold text-sm flex-shrink-0 ${
-                    showFeedback && isCorrectAns ? "bg-green-500 text-white" :
-                    showFeedback && isSelected ? "bg-red-500 text-white" :
-                    isSelected ? "bg-teal-500 text-white" : "bg-slate-100 text-slate-600"
-                  }`}>
+                  <span
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${
+                      showFeedback && isCorrectAns
+                        ? "bg-green-500 text-white"
+                        : showFeedback && isSelected
+                        ? "bg-red-500 text-white"
+                        : isSelected
+                        ? "bg-teal-500 text-white"
+                        : "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                    }`}
+                  >
                     {ans.key.toUpperCase()}
                   </span>
-                  <span className="text-slate-800 flex-1">{ans.text}</span>
-                  {showFeedback && isCorrectAns && <CheckCircle2 className="w-5 h-5 text-green-600" />}
-                  {showFeedback && isSelected && !isCorrectAns && <XCircle className="w-5 h-5 text-red-600" />}
+                  <span className="flex-1 font-medium text-sm md:text-base">{ans.text}</span>
+                  {showFeedback && isCorrectAns && <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />}
+                  {showFeedback && isSelected && !isCorrectAns && <XCircle className="w-5 h-5 text-red-500 shrink-0" />}
                 </button>
               );
             })}
           </div>
 
-          {/* Feedback */}
+          {/* التغذية الراجعة والترجمة والشرح */}
           {showFeedback && (
-            <div className="mt-6 space-y-3 animate-fadeIn">
-              <div className={`p-4 rounded-xl ${isCorrect ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  {isCorrect ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : <XCircle className="w-5 h-5 text-red-600" />}
-                  <span className={`font-semibold ${isCorrect ? "text-green-800" : "text-red-800"}`}>
-                    {isCorrect ? "Correct!" : "Wrong!"}
+            <div className="mt-6 space-y-3 animate-fadeIn text-right" dir="rtl">
+              <div
+                className={`p-4 rounded-xl border ${
+                  isCorrect
+                    ? "bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-800 text-green-900 dark:text-green-300"
+                    : "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800 text-red-900 dark:text-red-300"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {isCorrect ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : <XCircle className="w-5 h-5 text-red-500" />}
+                  <span className="font-bold text-sm">
+                    {isCorrect ? "إجابة صحيحة، أحسنت!" : `إجابة خاطئة! الحل الصحيح هو: (${q.correct_answer.toUpperCase()})`}
                   </span>
-                  {!isCorrect && (
-                    <span className="text-sm text-red-600">
-                      The correct answer is {q.correct_answer.toUpperCase()}
-                    </span>
-                  )}
                 </div>
               </div>
 
               {quiz.show_translations && q.correct_answer_translation && (
-                <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                  <Globe className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-blue-800">
-                    <strong>Translation:</strong> {q.correct_answer_translation}
+                <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-900 text-sm text-blue-900 dark:text-blue-300">
+                  <Globe className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                  <p>
+                    <strong>ترجمة الحل:</strong> {q.correct_answer_translation}
                   </p>
                 </div>
               )}
 
               {quiz.show_explanations && q.explanation && (
-                <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg border border-amber-100">
-                  <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-amber-800">
-                    <strong>Explanation:</strong> {q.explanation}
+                <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-900 text-sm text-amber-900 dark:text-amber-300">
+                  <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <p>
+                    <strong>الشرح والتوضيح:</strong> {q.explanation}
                   </p>
                 </div>
               )}
             </div>
           )}
 
-          {/* Next button */}
+          {/* زر المتابعة */}
           {showFeedback && (
             <button
               onClick={handleNext}
               disabled={submitting}
-              className="btn-primary w-full mt-6 flex items-center justify-center gap-2 animate-fadeIn"
+              className="btn-primary w-full mt-6 py-3 flex items-center justify-center gap-2 text-base font-bold shadow-lg"
             >
               {submitting ? (
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  {currentIdx < questions.length - 1 ? "Next Question" : "Finish Quiz"}
+                  <span>{currentIdx < questions.length - 1 ? "السؤال التالي" : "إنهاء الاختبار"}</span>
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
