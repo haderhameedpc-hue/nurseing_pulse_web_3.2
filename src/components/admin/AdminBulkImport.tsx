@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { Upload, FileText, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Upload, FileText, AlertCircle, CheckCircle2, Layers, Sparkles, HelpCircle } from "lucide-react";
 import { adminApi } from "@/lib/api";
 import type { Quiz, QuestionTemplate } from "@/lib/api";
 import { useToast, LoadingSpinner, EmptyState } from "./shared";
+import { LINE_ROLES } from "./AdminTemplates";
 
 interface ParsedQuestion {
   question_text: string;
@@ -22,6 +23,7 @@ export function AdminBulkImport({ token }: { token: string }) {
   const [templates, setTemplates] = useState<QuestionTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedQuiz, setSelectedQuiz] = useState("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [rawText, setRawText] = useState("");
   const [parsed, setParsed] = useState<ParsedQuestion[]>([]);
   const { toast, showToast } = useToast();
@@ -29,216 +31,372 @@ export function AdminBulkImport({ token }: { token: string }) {
 
   useEffect(() => {
     Promise.all([adminApi.getQuizzes(token), adminApi.getTemplates(token)])
-      .then(([qz, ts]) => { setQuizzes(qz); setTemplates(ts); setLoading(false); })
+      .then(([qz, ts]) => {
+        setQuizzes(qz || []);
+        setTemplates(ts || []);
+        if (ts && ts.length > 0) {
+          setSelectedTemplateId(ts[0].id); // اختيار أول نموذج تلقائياً
+        }
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, [token]);
 
-  const parseQuestions = (text: string): ParsedQuestion[] => {
-    const blocks = text.trim().split(/\n\s*\n(?=\d+\.|\d+\))/).filter(b => b.trim());
-    return blocks.map(block => {
-      const errors: string[] = [];
-      const lines = block.trim().split("\n").map(l => l.trim());
-
-      let question_text = "";
-      let question_translation = "";
-      let answer_a = "", answer_b = "", answer_c = "", answer_d = "";
-      let correct_answer: "a" | "b" | "c" | "d" = "a";
-      let correct_answer_translation = "";
-      let explanation = "";
-      let foundAnswer = false;
-      let foundCorrect = false;
-
-      let lineIdx = 0;
-      // First line: question (starts with number. or number))
-      if (lines.length > 0) {
-        const qMatch = lines[0].match(/^\d+[\.\)]\s*(.+)$/);
-        if (qMatch) {
-          question_text = qMatch[1].trim();
-        } else {
-          question_text = lines[0];
-        }
-        lineIdx = 1;
-      }
-
-      // Check if next line is a translation (not an answer option)
-      if (lineIdx < lines.length && !/^[a-d]\)/.test(lines[lineIdx]) && !/^Answer:/i.test(lines[lineIdx]) && !/^Explanation:/i.test(lines[lineIdx])) {
-        question_translation = lines[lineIdx];
-        lineIdx++;
-      }
-
-      // Parse answer options
-      for (; lineIdx < lines.length; lineIdx++) {
-        const line = lines[lineIdx];
-        const aMatch = line.match(/^[a-d]\)\s*(.+)$/i);
-        if (aMatch) {
-          const key = aMatch[0][0].toLowerCase();
-          const val = aMatch[1].trim();
-          if (key === "a") answer_a = val;
-          else if (key === "b") answer_b = val;
-          else if (key === "c") answer_c = val;
-          else if (key === "d") answer_d = val;
-          foundAnswer = true;
-          continue;
-        }
-        const ansMatch = line.match(/^Answer:\s*([a-d])/i);
-        if (ansMatch) {
-          correct_answer = ansMatch[1].toLowerCase() as "a" | "b" | "c" | "d";
-          foundCorrect = true;
-          continue;
-        }
-        const transMatch = line.match(/^Answer\s*translation:?\s*(.+)$/i);
-        if (transMatch && foundCorrect) {
-          correct_answer_translation = transMatch[1].trim();
-          continue;
-        }
-        // Non-answer line after answers and no specific match → could be explanation
-        const explMatch = line.match(/^Explanation:?\s*(.+)$/i);
-        if (explMatch) {
-          explanation = explMatch[1].trim();
-          continue;
-        }
-      }
-
-      if (!question_text) errors.push("Missing question text");
-      if (!answer_a && !answer_b && !answer_c && !answer_d) errors.push("Missing answer options");
-      if (!foundCorrect) errors.push("Missing correct answer (Answer: x)");
-
-      return { question_text, question_translation, answer_a, answer_b, answer_c, answer_d, correct_answer, correct_answer_translation, explanation, errors };
-    });
+  // دالة تنظيف الرموز السابقة (مثل "1.", "a)", "Answer: " الخ)
+  const cleanLineValue = (val: string, role: string): string => {
+    let text = val.trim();
+    if (role === "question_text") {
+      text = text.replace(/^(\d+[\.\)\-:]|Q\d+[:\.\)])\s*/i, "");
+    } else if (role.startsWith("answer_")) {
+      text = text.replace(/^[a-dأ-د١-٤][\.\)\-:]\s*/i, "");
+    } else if (role === "correct_answer") {
+      text = text.replace(/^(Answer|Correct|إجابة|الجواب|الحل)[:\s\-\.]*/i, "").trim();
+      // تحويل الأحرف أو الأرقام العربية إلى أحرف إنجليزية قياسية
+      const letter = text.charAt(0).toLowerCase();
+      if (letter === "أ" || letter === "ا" || letter === "1" || letter === "١") return "a";
+      if (letter === "ب" || letter === "2" || letter === "٢") return "b";
+      if (letter === "ج" || letter === "3" || letter === "٣") return "c";
+      if (letter === "د" || letter === "4" || letter === "٤") return "d";
+      if (["a", "b", "c", "d"].includes(letter)) return letter;
+    } else if (role === "explanation") {
+      text = text.replace(/^(Explanation|الشرح|التوضيح)[:\s\-\.]*/i, "");
+    } else if (role === "correct_answer_translation") {
+      text = text.replace(/^(Translation|ترجمة|ترجمة الحل)[:\s\-\.]*/i, "");
+    }
+    return text.trim();
   };
 
+  // معالجة وتحليل النص بناءً على النموذج المحدد
   const handleParse = () => {
-    if (!rawText.trim()) { showToast("Please paste some questions first", "error"); return; }
-    const result = parseQuestions(rawText);
-    setParsed(result);
-    if (result.length > 0) showToast(`Parsed ${result.length} questions`);
-    else showToast("No questions found. Check your format.", "error");
+    if (!rawText.trim()) {
+      showToast("يرجى لصق نص الأسئلة أولاً", "error");
+      return;
+    }
+
+    // تقسيم النص إلى كتل أسئلة مفصولة بأسطر فارغة
+    const blocks = rawText
+      .trim()
+      .split(/\n\s*\n+/)
+      .map((b) => b.trim())
+      .filter((b) => b.length > 0);
+
+    const chosenTemplate = templates.find((t) => t.id === selectedTemplateId);
+    const lineMapping: string[] = (chosenTemplate?.parsing_rules as any)?.line_mapping || [];
+
+    const parsedResults: ParsedQuestion[] = blocks.map((block, blockIndex) => {
+      const blockLines = block
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
+
+      const q: ParsedQuestion = {
+        question_text: "",
+        question_translation: "",
+        answer_a: "",
+        answer_b: "",
+        answer_c: "",
+        answer_d: "",
+        correct_answer: "a",
+        correct_answer_translation: "",
+        explanation: "",
+        errors: [],
+      };
+
+      // إذا كان هناك نموذج محدد، نمشي سطر بسطر حسب المخطط
+      if (chosenTemplate && lineMapping.length > 0) {
+        blockLines.forEach((line, lineIdx) => {
+          const role = lineMapping[lineIdx];
+          if (!role || role === "ignore") return;
+
+          const cleaned = cleanLineValue(line, role);
+
+          if (role === "question_text") q.question_text = cleaned;
+          else if (role === "question_translation") q.question_translation = cleaned;
+          else if (role === "answer_a") q.answer_a = cleaned;
+          else if (role === "answer_b") q.answer_b = cleaned;
+          else if (role === "answer_c") q.answer_c = cleaned;
+          else if (role === "answer_d") q.answer_d = cleaned;
+          else if (role === "correct_answer") {
+            const letter = cleanLineValue(line, "correct_answer");
+            if (["a", "b", "c", "d"].includes(letter)) {
+              q.correct_answer = letter as any;
+            } else {
+              q.errors.push(`الإجابة الصحيحة غير واضحة (القيمة: "${line}")`);
+            }
+          } else if (role === "correct_answer_translation") q.correct_answer_translation = cleaned;
+          else if (role === "explanation") q.explanation = cleaned;
+        });
+
+        if (blockLines.length !== lineMapping.length) {
+          q.errors.push(`عدد أسطر هذا السؤال (${blockLines.length}) لا يطابق النموذج المحدد (${lineMapping.length} أسطر)`);
+        }
+      } else {
+        // إذا لم يختر نموذجاً: تحليل تلقائي مرن
+        blockLines.forEach((line) => {
+          const lower = line.toLowerCase();
+          if (/^answer:?\s*([a-dأ-د])/i.test(line)) {
+            const m = line.match(/^answer:?\s*([a-dأ-د])/i);
+            const letter = m ? m[1].toLowerCase() : "a";
+            q.correct_answer = letter === "أ" ? "a" : letter === "ب" ? "b" : letter === "ج" ? "c" : letter === "د" ? "d" : (letter as any);
+          } else if (/^[aAأ][\.\)]\s*(.+)/.test(line)) {
+            q.answer_a = line.replace(/^[aAأ][\.\)]\s*/, "");
+          } else if (/^[bBب][\.\)]\s*(.+)/.test(line)) {
+            q.answer_b = line.replace(/^[bBب][\.\)]\s*/, "");
+          } else if (/^[cCج][\.\)]\s*(.+)/.test(line)) {
+            q.answer_c = line.replace(/^[cCج][\.\)]\s*/, "");
+          } else if (/^[dDد][\.\)]\s*(.+)/.test(line)) {
+            q.answer_d = line.replace(/^[dDد][\.\)]\s*/, "");
+          } else if (lower.startsWith("explanation:") || lower.startsWith("شرح:")) {
+            q.explanation = line.replace(/^(explanation|شرح):?\s*/i, "");
+          } else if (!q.question_text) {
+            q.question_text = line.replace(/^\d+[\.\)]\s*/, "");
+          } else if (!q.question_translation) {
+            q.question_translation = line;
+          }
+        });
+      }
+
+      // فحص الأخطاء والحقول الإلزامية
+      if (!q.question_text) q.errors.push("نص السؤال مفقود");
+      if (!q.answer_a) q.errors.push("الخيار A مفقود");
+      if (!q.answer_b) q.errors.push("الخيار B مفقود");
+      if (!q.answer_c) q.errors.push("الخيار C مفقود");
+      if (!q.answer_d) q.errors.push("الخيار D مفقود");
+
+      return q;
+    });
+
+    setParsed(parsedResults);
+    const validCount = parsedResults.filter((p) => p.errors.length === 0).length;
+    showToast(`تم التعرف على ${parsedResults.length} سؤال (${validCount} جاهز للاستيراد)`);
   };
 
+  // استيراد الأسئلة الصالحة دفعة واحدة
   const handleImport = async () => {
-    if (!selectedQuiz) { showToast("Please select a target quiz", "error"); return; }
-    const valid = parsed.filter(p => p.errors.length === 0);
-    if (valid.length === 0) { showToast("No valid questions to import", "error"); return; }
+    if (!selectedQuiz) {
+      showToast("يرجى اختيار الاختبار الهدف أولاً", "error");
+      return;
+    }
+
+    const validQuestions = parsed.filter((p) => p.errors.length === 0);
+    if (validQuestions.length === 0) {
+      showToast("لا توجد أسئلة صالحة للاستيراد", "error");
+      return;
+    }
+
     setImporting(true);
     try {
-      const questions = valid.map((p, i) => ({
+      const payload = validQuestions.map((q, idx) => ({
         quiz_id: selectedQuiz,
-        question_text: p.question_text,
-        question_translation: p.question_translation,
-        answer_a: p.answer_a, answer_b: p.answer_b, answer_c: p.answer_c, answer_d: p.answer_d,
-        correct_answer: p.correct_answer,
-        correct_answer_translation: p.correct_answer_translation,
-        explanation: p.explanation,
-        sort_order: i,
+        question_text: q.question_text,
+        question_translation: q.question_translation || "",
+        answer_a: q.answer_a,
+        answer_b: q.answer_b,
+        answer_c: q.answer_c,
+        answer_d: q.answer_d,
+        correct_answer: q.correct_answer,
+        correct_answer_translation: q.correct_answer_translation || "",
+        explanation: q.explanation || "",
+        sort_order: idx + 1,
         is_enabled: true,
         is_visible: true,
       }));
-      await adminApi.bulkImportQuestions(token, questions);
-      showToast(`Imported ${valid.length} questions successfully`);
-      setParsed([]); setRawText("");
-    } catch (err) { showToast((err as Error).message, "error"); }
-    finally { setImporting(false); }
+
+      await adminApi.bulkImportQuestions(token, payload);
+      showToast(`تم استيراد ${validQuestions.length} سؤال بنجاح!`);
+      setParsed([]);
+      setRawText("");
+    } catch (err: any) {
+      showToast(err.message || "حدث خطأ أثناء الاستيراد", "error");
+    } finally {
+      setImporting(false);
+    }
   };
 
   if (loading) return <LoadingSpinner />;
 
-  const validCount = parsed.filter(p => p.errors.length === 0).length;
+  const validCount = parsed.filter((p) => p.errors.length === 0).length;
   const invalidCount = parsed.length - validCount;
+  const currentTemplate = templates.find((t) => t.id === selectedTemplateId);
 
   return (
-    <div className="space-y-4 animate-fadeIn">
-      <div className="card p-6">
-        <h2 className="font-semibold text-slate-800 mb-4 flex items-center gap-2"><Upload className="w-5 h-5 text-teal-600" /> Bulk Question Import</h2>
+    <div className="space-y-6 animate-fadeIn text-right">
+      <div className="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-sm">
+        <h2 className="text-lg font-bold text-slate-100 mb-2 flex items-center gap-2">
+          <Upload className="w-5 h-5 text-teal-400" /> الاستيراد السريع للأسئلة (Bulk Import)
+        </h2>
+        <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+          اختر الاختبار والنموذج الذي يناسب تنسيق أسئلتك، ثم الصق النص ليقوم النظام بفرز الخيارات والأجوبة آلياً وإضافتها بنقرة زر.
+        </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Target Quiz</label>
-            <select className="input-field" value={selectedQuiz} onChange={e => setSelectedQuiz(e.target.value)}>
-              <option value="">— Select Quiz —</option>
-              {quizzes.map(q => <option key={q.id} value={q.id}>{q.name}</option>)}
+            <label className="block text-sm font-semibold text-slate-300 mb-1.5">1. الاختبار المستهدف (Target Quiz)</label>
+            <select
+              className="input-field"
+              value={selectedQuiz}
+              onChange={(e) => setSelectedQuiz(e.target.value)}
+            >
+              <option value="">-- اختر الاختبار لتخزين الأسئلة فيه --</option>
+              {quizzes.map((q) => (
+                <option key={q.id} value={q.id}>
+                  {q.name}
+                </option>
+              ))}
             </select>
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Reference Template</label>
-            <select className="input-field" disabled={!templates.length}>
-              <option>{templates.length ? "Select for reference" : "No templates created yet"}</option>
-              {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            <label className="block text-sm font-semibold text-slate-300 mb-1.5">2. نموذج التنسيق (Question Template)</label>
+            <select
+              className="input-field"
+              value={selectedTemplateId}
+              onChange={(e) => setSelectedTemplateId(e.target.value)}
+            >
+              <option value="">التعرف التلقائي الذكي (بدون نموذج)</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name} ({(t.parsing_rules as any)?.line_mapping?.length || 0} أسطر)
+                </option>
+              ))}
             </select>
           </div>
         </div>
+
+        {/* ملخص هيكل النموذج المختار */}
+        {currentTemplate && (
+          <div className="mb-4 p-3 bg-slate-900 rounded-lg border border-slate-800 flex items-center justify-between text-xs text-slate-400">
+            <span className="flex items-center gap-1.5 text-teal-400 font-medium">
+              <Sparkles className="w-4 h-4" /> النموذج يحدد {((currentTemplate.parsing_rules as any)?.line_mapping || []).length} أسطر لكل سؤال
+            </span>
+            <span>افصل بين كل سؤال والذي يليه بسطر فارغ واحد</span>
+          </div>
+        )}
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-slate-700 mb-1">Paste Questions</label>
+          <label className="block text-sm font-semibold text-slate-300 mb-1.5">3. الصق مجموعة الأسئلة هنا</label>
           <textarea
-            className="input-field font-mono text-sm"
+            className="input-field font-mono text-xs leading-relaxed text-left"
+            dir="ltr"
             rows={12}
             value={rawText}
-            onChange={e => setRawText(e.target.value)}
-            placeholder={`1. What is the capital of France?
-
-What is the capital of France? (translation)
-
-a) London
-b) Paris
-c) Berlin
-d) Madrid
-
-Answer: b
-
-Paris (translation)
-
-Explanation: Paris is the capital and largest city of France.
-
-2. What is 2 + 2?
-
-a) 3
-b) 4
-c) 5
-d) 6
-
-Answer: b`}
+            onChange={(e) => setRawText(e.target.value)}
+            placeholder="الصق كل الأسئلة هنا مع ترك سطر فارغ بين كل سؤال والآخر..."
           />
-          <p className="text-xs text-slate-400 mt-1">Separate questions with blank lines. Each question starts with a number.</p>
         </div>
 
-        <button onClick={handleParse} className="btn-secondary flex items-center gap-2"><FileText className="w-4 h-4" /> Parse & Preview</button>
+        <button onClick={handleParse} className="btn-secondary flex items-center gap-2 text-sm font-semibold">
+          <FileText className="w-4 h-4" /> تحليل ومعاينة الأسئلة
+        </button>
       </div>
 
+      {/* نتائج التحليل والمعاينة */}
       {parsed.length > 0 && (
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-slate-800">Preview ({parsed.length} questions)</h3>
-            <div className="flex items-center gap-4 text-sm">
-              <span className="text-green-600 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> {validCount} valid</span>
-              {invalidCount > 0 && <span className="text-red-500 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {invalidCount} errors</span>}
+        <div className="bg-slate-950 border border-slate-800 rounded-xl p-6 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+            <div>
+              <h3 className="font-bold text-slate-100 text-base">معاينة الأسئلة المستخرجة ({parsed.length})</h3>
+              <p className="text-xs text-slate-400 mt-0.5">تأكد من صحة الحقول قبل الإضافة النهائية</p>
+            </div>
+            <div className="flex items-center gap-3 text-xs font-semibold">
+              <span className="text-green-400 flex items-center gap-1 bg-green-950/60 px-2.5 py-1 rounded-full border border-green-800/60">
+                <CheckCircle2 className="w-3.5 h-3.5" /> {validCount} سؤال جاهز
+              </span>
+              {invalidCount > 0 && (
+                <span className="text-red-400 flex items-center gap-1 bg-red-950/60 px-2.5 py-1 rounded-full border border-red-800/60">
+                  <AlertCircle className="w-3.5 h-3.5" /> {invalidCount} به ملاحظات
+                </span>
+              )}
             </div>
           </div>
 
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {parsed.map((q, i) => (
-              <div key={i} className={`p-4 rounded-lg border ${q.errors.length ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"}`}>
-                <p className="font-medium text-slate-800 text-sm">{i + 1}. {q.question_text || "(empty)"}</p>
-                <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
-                  <span>Answer: {q.correct_answer.toUpperCase()}</span>
-                  {q.answer_a && <span>A: {q.answer_a.slice(0, 20)}</span>}
-                </div>
-                {q.errors.length > 0 && (
-                  <div className="mt-2 text-xs text-red-600">
-                    {q.errors.map((e, j) => <div key={j}>• {e}</div>)}
+          <div className="space-y-3 max-h-[32rem] overflow-y-auto pr-1">
+            {parsed.map((q, idx) => {
+              const hasErrors = q.errors.length > 0;
+              return (
+                <div
+                  key={idx}
+                  className={`p-4 rounded-xl border text-sm transition-colors ${
+                    hasErrors ? "border-red-900/60 bg-red-950/20" : "border-slate-800 bg-slate-900/60"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <span className="font-bold text-teal-400 font-mono text-xs block mb-1">السؤال #{idx + 1}</span>
+                      <p className="font-semibold text-slate-100">{q.question_text || "(بدون نص)"}</p>
+                      {q.question_translation && (
+                        <p className="text-xs text-blue-400 mt-1">{q.question_translation}</p>
+                      )}
+                    </div>
+                    <span className="px-2.5 py-1 rounded-lg bg-teal-950/80 border border-teal-800 text-teal-300 font-mono text-xs shrink-0">
+                      الإجابة: {q.correct_answer.toUpperCase()}
+                    </span>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {/* الخيارات */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-800/60 text-xs">
+                    <span className={`p-1.5 rounded bg-slate-950 font-mono ${q.correct_answer === "a" ? "text-green-400 font-bold" : "text-slate-300"}`}>
+                      A: {q.answer_a || "---"}
+                    </span>
+                    <span className={`p-1.5 rounded bg-slate-950 font-mono ${q.correct_answer === "b" ? "text-green-400 font-bold" : "text-slate-300"}`}>
+                      B: {q.answer_b || "---"}
+                    </span>
+                    <span className={`p-1.5 rounded bg-slate-950 font-mono ${q.correct_answer === "c" ? "text-green-400 font-bold" : "text-slate-300"}`}>
+                      C: {q.answer_c || "---"}
+                    </span>
+                    <span className={`p-1.5 rounded bg-slate-950 font-mono ${q.correct_answer === "d" ? "text-green-400 font-bold" : "text-slate-300"}`}>
+                      D: {q.answer_d || "---"}
+                    </span>
+                  </div>
+
+                  {/* الشرح وترجمة الحل */}
+                  {(q.explanation || q.correct_answer_translation) && (
+                    <div className="mt-2 text-xs text-slate-400 space-y-0.5 bg-slate-950/50 p-2 rounded">
+                      {q.correct_answer_translation && <p><strong className="text-slate-300">ترجمة الحل:</strong> {q.correct_answer_translation}</p>}
+                      {q.explanation && <p><strong className="text-slate-300">الشرح:</strong> {q.explanation}</p>}
+                    </div>
+                  )}
+
+                  {/* الأخطاء إن وجدت */}
+                  {hasErrors && (
+                    <div className="mt-3 p-2 bg-red-950/40 rounded border border-red-800/40 text-xs text-red-300 space-y-1">
+                      {q.errors.map((err, eIdx) => (
+                        <div key={eIdx} className="flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                          <span>{err}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
-          <button onClick={handleImport} disabled={importing || !selectedQuiz || validCount === 0} className="btn-primary mt-4 flex items-center gap-2">
-            {importing ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Upload className="w-4 h-4" />}
-            Import {validCount} Valid Questions
-          </button>
+          <div className="pt-2 border-t border-slate-800 flex justify-end">
+            <button
+              onClick={handleImport}
+              disabled={importing || !selectedQuiz || validCount === 0}
+              className="btn-primary py-3 px-6 flex items-center gap-2 font-bold text-sm shadow-xl"
+            >
+              {importing ? (
+                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" />
+                  <span>استيراد ({validCount}) سؤال صالح الآن</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 
-      {toast && <div className={`fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg z-50 ${toast.type === "success" ? "bg-green-600" : "bg-red-600"} text-white animate-fadeIn`}>{toast.message}</div>}
+      {toast && (
+        <div className={`fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg z-50 ${toast.type === "success" ? "bg-green-600" : "bg-red-600"} text-white animate-fadeIn`}>
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }
