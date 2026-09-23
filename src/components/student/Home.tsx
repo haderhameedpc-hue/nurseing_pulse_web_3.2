@@ -117,7 +117,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
 
         {/* مسار التنقل Breadcrumb */}
         <div className="card p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
