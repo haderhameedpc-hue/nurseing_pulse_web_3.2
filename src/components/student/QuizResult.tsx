@@ -80,7 +80,8 @@ export function QuizResult({ quiz, result, onHome, onRetry }: ResultProps) {
               { key: "b", text: q.answer_b },
               { key: "c", text: q.answer_c },
               { key: "d", text: q.answer_d },
-            ];
+            ...((q as any).answer_e ? [{ key: "e", text: (q as any).answer_e }] : []),
+  ];
             return (
               <div key={a.id} className="card p-6 animate-fadeIn">
                 <div className="flex items-center gap-2 mb-3">
