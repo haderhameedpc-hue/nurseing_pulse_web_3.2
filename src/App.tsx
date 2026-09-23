@@ -12,8 +12,14 @@ import { AdminApp } from "@/components/admin/AdminApp";
 type View =
   | { name: "home" }
   | { name: "mode-select"; quiz: Quiz }
-  | { name: "quiz"; quiz: Quiz; mode: "timed" | "untimed" }
-  | { name: "result"; quiz: Quiz; result: any }
+  | {
+      name: "quiz";
+      quiz: Quiz;
+      mode: "timed" | "untimed";
+      questionIds?: string[];
+      isRetryWrong?: boolean;
+    }
+  | { name: "result"; quiz: Quiz; result: any; mode: "timed" | "untimed" }
   | { name: "profile" }
   | { name: "settings" }
   | { name: "admin" };
@@ -123,7 +129,9 @@ function App() {
           quiz={view.quiz}
           studentId={student.id}
           mode={view.mode}
-          onComplete={(result) => setView({ name: "result", quiz: view.quiz, result })}
+          questionIds={view.questionIds}
+          isRetryWrong={view.isRetryWrong}
+          onComplete={(result) => setView({ name: "result", quiz: view.quiz, result, mode: view.mode })}
           onExit={() => setView({ name: "home" })}
         />
       );
@@ -134,13 +142,24 @@ function App() {
           result={view.result}
           onHome={() => {
             setView({ name: "home" });
-            setStudent({
-              ...student,
-              total_points: student.total_points + view.result.total_score,
-              total_completed_quizzes: student.total_completed_quizzes + 1,
-            });
+            if (!view.result.isPractice) {
+              setStudent({
+                ...student,
+                total_points: student.total_points + (view.result.total_score || 0),
+                total_completed_quizzes: student.total_completed_quizzes + 1,
+              });
+            }
           }}
           onRetry={() => setView({ name: "mode-select", quiz: view.quiz })}
+          onRetryWrong={(wrongIds) =>
+            setView({
+              name: "quiz",
+              quiz: view.quiz,
+              mode: view.mode,
+              questionIds: wrongIds,
+              isRetryWrong: true,
+            })
+          }
         />
       );
     case "profile":
