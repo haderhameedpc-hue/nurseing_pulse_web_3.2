@@ -66,7 +66,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
       {/* Header */}
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-sm mb-4">
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-teal-600 rounded-lg flex items-center justify-center">
@@ -104,7 +104,38 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
         </div>
       </header>
 
-      <div className="card p-4 mb-4">
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <StatCard icon={<Trophy className="w-5 h-5" />} label="Points" value={student.total_points.toFixed(0)} color="text-amber-600 bg-amber-50 dark:bg-amber-950/40" />
+          <StatCard icon={<Target className="w-5 h-5" />} label="Completed" value={student.total_completed_quizzes} color="text-teal-600 bg-teal-50 dark:bg-teal-950/40" />
+          <StatCard icon={<TrendingUp className="w-5 h-5" />} label="Highest" value={student.highest_score.toFixed(0)} color="text-blue-600 bg-blue-50 dark:bg-blue-950/40" />
+          <StatCard icon={<Clock className="w-5 h-5" />} label="Time Spent" value={formatTime(student.total_time_spent_seconds)} color="text-slate-600 bg-slate-100 dark:bg-slate-800" />
+        </div>
+
+        {/* Leaderboard toggle */}
+        {leaderboard?.enabled && (
+          <div className="mb-6">
+            <button
+              onClick={() => setShowLeaderboard(!showLeaderboard)}
+              className="w-full flex items-center justify-between p-4 card hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-center gap-3">
+                <Trophy className="w-6 h-6 text-amber-500" />
+                <span className="font-semibold text-slate-800 dark:text-slate-200">Leaderboard</span>
+              </div>
+              <ChevronRight className={`w-5 h-5 text-slate-400 transition-transform ${showLeaderboard ? "rotate-90" : ""}`} />
+            </button>
+            {showLeaderboard && leaderboard.students.length > 0 && (
+              <div className="mt-3 card overflow-hidden animate-fadeIn">
+                <LeaderboardTable students={leaderboard.students} settings={leaderboard.settings} currentStudentId={student.id} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Quiz Navigation Breadcrumb */}
+        <div className="card p-4 mb-4">
           <div className="flex items-center gap-1.5 text-sm flex-wrap">
             <button
               onClick={() => { setSelectedStage(null); setSelectedCourse(null); setSelectedSubject(null); setSelectedFolder(null); }}
@@ -243,39 +274,6 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
             </>
           )}
         </div>
-      
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <StatCard icon={<Trophy className="w-5 h-5" />} label="Points" value={student.total_points.toFixed(0)} color="text-amber-600 bg-amber-50 dark:bg-amber-950/40" />
-          <StatCard icon={<Target className="w-5 h-5" />} label="Completed" value={student.total_completed_quizzes} color="text-teal-600 bg-teal-50 dark:bg-teal-950/40" />
-          <StatCard icon={<TrendingUp className="w-5 h-5" />} label="Highest" value={student.highest_score.toFixed(0)} color="text-blue-600 bg-blue-50 dark:bg-blue-950/40" />
-          <StatCard icon={<Clock className="w-5 h-5" />} label="Time Spent" value={formatTime(student.total_time_spent_seconds)} color="text-slate-600 bg-slate-100 dark:bg-slate-800" />
-        </div>
-
-        {/* Leaderboard toggle */}
-        {leaderboard?.enabled && (
-          <div className="mb-6">
-            <button
-              onClick={() => setShowLeaderboard(!showLeaderboard)}
-              className="w-full flex items-center justify-between p-4 card hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center gap-3">
-                <Trophy className="w-6 h-6 text-amber-500" />
-                <span className="font-semibold text-slate-800 dark:text-slate-200">Leaderboard</span>
-              </div>
-              <ChevronRight className={`w-5 h-5 text-slate-400 transition-transform ${showLeaderboard ? "rotate-90" : ""}`} />
-            </button>
-            {showLeaderboard && leaderboard.students.length > 0 && (
-              <div className="mt-3 card overflow-hidden animate-fadeIn">
-                <LeaderboardTable students={leaderboard.students} settings={leaderboard.settings} currentStudentId={student.id} />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Quiz Navigation Breadcrumb */}
-        
       </div>
     </div>
   );
