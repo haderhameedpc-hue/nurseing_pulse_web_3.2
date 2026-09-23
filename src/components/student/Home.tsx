@@ -245,14 +245,6 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
             </>
           )}
         </div>
-        
-        {/* Stats Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <StatCard icon={<Trophy className="w-5 h-5" />} label="Points" value={student.total_points.toFixed(0)} color="text-amber-600 bg-amber-50 dark:bg-amber-950/40" />
-          <StatCard icon={<Target className="w-5 h-5" />} label="Completed" value={student.total_completed_quizzes} color="text-teal-600 bg-teal-50 dark:bg-teal-950/40" />
-          <StatCard icon={<TrendingUp className="w-5 h-5" />} label="Highest" value={student.highest_score.toFixed(0)} color="text-blue-600 bg-blue-50 dark:bg-blue-950/40" />
-          <StatCard icon={<Clock className="w-5 h-5" />} label="Time Spent" value={formatTime(student.total_time_spent_seconds)} color="text-slate-600 bg-slate-100 dark:bg-slate-800" />
-        </div>
 
         {/* Leaderboard toggle */}
         {leaderboard?.enabled && (
@@ -274,6 +266,16 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
             )}
           </div>
         )}
+        
+        {/* Stats Overview */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <StatCard icon={<Trophy className="w-5 h-5" />} label="Points" value={student.total_points.toFixed(0)} color="text-amber-600 bg-amber-50 dark:bg-amber-950/40" />
+          <StatCard icon={<Target className="w-5 h-5" />} label="Completed" value={student.total_completed_quizzes} color="text-teal-600 bg-teal-50 dark:bg-teal-950/40" />
+          <StatCard icon={<TrendingUp className="w-5 h-5" />} label="Highest" value={student.highest_score.toFixed(0)} color="text-blue-600 bg-blue-50 dark:bg-blue-950/40" />
+          <StatCard icon={<Clock className="w-5 h-5" />} label="Time Spent" value={formatTime(student.total_time_spent_seconds)} color="text-slate-600 bg-slate-100 dark:bg-slate-800" />
+        </div>
+
+        
 
         
       </div>
