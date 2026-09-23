@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Search, Eye, ArrowLeft, Trash2, Edit2, Plus, Award, Trophy } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { adminApi } from "@/lib/api";
-import { LoadingSpinner, EmptyState, Modal, ConfirmDialog, useToast } from "./shared";
+import { LoadingSpinner, Modal, ConfirmDialog, useToast } from "./shared";
 
 export function AdminStudents({
   token,
@@ -69,14 +69,12 @@ export function AdminStudents({
   const handleDeleteStudent = async () => {
     if (!deleteStudent) return;
     try {
-      // الحذف عبر صلاحية الإدارة العليا (Service Role)
       await adminApi.deleteStudent(token, deleteStudent.id);
-
-      showToast("تم حذف الطالب وسجلاته بالكامل");
+      showToast("تم حذف الطالب بنجاح");
       setStudents((prev) => prev.filter((s) => s.id !== deleteStudent.id));
       setDeleteStudent(null);
     } catch (err: any) {
-      showToast(err.message || "حدث خطأ أثناء الحذف", "error");
+      showToast(err.message || "فشل الحذف", "error");
     }
   };
 
@@ -94,7 +92,7 @@ export function AdminStudents({
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
             className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-slate-700 bg-slate-950 text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-teal-500 outline-none"
-            placeholder="البحث باسم الطالب أو المعرف..."
+            placeholder="البحث باسم الطالب..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -111,10 +109,10 @@ export function AdminStudents({
             <thead>
               <tr className="bg-slate-900 border-b border-slate-800">
                 <th className="px-4 py-3 text-left font-semibold text-slate-300">اسم الطالب</th>
-                <th className="px-4 py-3 text-left font-semibold text-slate-300">معرف الطالب</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-300">المعرف</th>
                 <th className="px-4 py-3 text-right font-semibold text-slate-300">النقاط</th>
-                <th className="px-4 py-3 text-right font-semibold text-slate-300">الاختبارات المكتملة</th>
-                <th className="px-4 py-3 text-right font-semibold text-slate-300">الوقت المستغرق</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-300">الاختبارات</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-300">الوقت</th>
                 <th className="px-4 py-3 text-center font-semibold text-slate-300">الإجراءات</th>
               </tr>
             </thead>
@@ -130,21 +128,21 @@ export function AdminStudents({
                     <div className="flex items-center justify-center gap-1.5">
                       <button
                         onClick={() => onViewStudent(st.id)}
-                        className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-teal-400 transition-colors"
+                        className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-teal-400"
                         title="عرض الملف والجوائز"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setEditStudent(st)}
-                        className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-amber-400 transition-colors"
+                        className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-amber-400"
                         title="تعديل النقاط والاسم"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setDeleteStudent(st)}
-                        className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-red-400 transition-colors"
+                        className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-red-400"
                         title="حذف الطالب"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -178,18 +176,18 @@ export function AdminStudents({
               <input
                 name="display_name"
                 defaultValue={editStudent.display_name}
-                className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white outline-none focus:border-teal-500"
+                className="input-field"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">إجمالي النقاط (Points)</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">إجمالي النقاط</label>
               <input
                 type="number"
                 step="any"
                 name="total_points"
                 defaultValue={editStudent.total_points}
-                className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white outline-none focus:border-teal-500"
+                className="input-field"
                 required
               />
             </div>
@@ -199,7 +197,7 @@ export function AdminStudents({
                 type="number"
                 name="total_completed_quizzes"
                 defaultValue={editStudent.total_completed_quizzes}
-                className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white outline-none focus:border-teal-500"
+                className="input-field"
                 required
               />
             </div>
@@ -220,11 +218,11 @@ export function AdminStudents({
         </Modal>
       )}
 
-      {/* نافذة تأكيد حذف الطالب */}
+      {/* تأكيد الحذف */}
       {deleteStudent && (
         <ConfirmDialog
           title="حذف الطالب نهائياً"
-          message={`هل أنت متأكد من رغبتك في حذف حساب "${deleteStudent.display_name}"؟ سيتم حذف جميع محاولاته ونقاطه ولا يمكن استرجاعها.`}
+          message={`هل أنت متأكد من رغبتك في حذف حساب "${deleteStudent.display_name}"؟`}
           onConfirm={handleDeleteStudent}
           onCancel={() => setDeleteStudent(null)}
         />
@@ -288,7 +286,6 @@ export function AdminStudentDetail({
     loadDetail();
   }, [studentId]);
 
-  // إضافة جائزة أو وسام للطالب يدوياً
   const handleAwardAchievement = async () => {
     if (!selectedAchId) return;
     try {
@@ -299,16 +296,15 @@ export function AdminStudentDetail({
 
       if (error) throw error;
 
-      showToast("تم منح الجائزة للطالب");
+      showToast("تم منح الجائزة للطالب بنجاح");
       setAddAchOpen(false);
       setSelectedAchId("");
       loadDetail();
     } catch (err: any) {
-      showToast(err.message || "هذا الوسام ممنوح مسبقاً لهذا الطالب", "error");
+      showToast(err.message || "هذا الوسام ممنوح مسبقاً", "error");
     }
   };
 
-  // سحب / حذف جائزة أو وسام من الطالب
   const handleRemoveAchievement = async (studentAchId: string) => {
     try {
       const { error } = await supabase
@@ -318,29 +314,27 @@ export function AdminStudentDetail({
 
       if (error) throw error;
 
-      showToast("تم سحب الوسام من الطالب");
+      showToast("تم سحب الجائزة");
       loadDetail();
     } catch (err: any) {
-      showToast(err.message || "فشل سحب الوسام", "error");
+      showToast(err.message || "فشل سحب الجائزة", "error");
     }
   };
 
   if (loading) return <LoadingSpinner />;
-  if (!student) return <EmptyState message="Student details not found." />;
+  if (!student) return <div className="text-slate-400 p-8 text-center">لم يتم العثور على الطالب</div>;
 
   return (
     <div className="space-y-6 animate-fadeIn">
       <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm">
-        <ArrowLeft className="w-4 h-4" /> العودة لقائمة الطلاب
+        <ArrowLeft className="w-4 h-4" /> العودة للطلاب
       </button>
 
-      {/* بطاقة معلومات الطالب */}
       <div className="bg-slate-950 border border-slate-800 rounded-xl p-6">
         <div className="flex justify-between items-start">
           <div>
             <h2 className="text-xl font-bold text-white">{student.display_name}</h2>
             <p className="text-xs font-mono text-slate-500 mt-1">ID: {student.id}</p>
-            <p className="text-xs text-slate-400 mt-1">تاريخ التسجيل: {new Date(student.created_at).toLocaleString()}</p>
           </div>
           <div className="text-right">
             <span className="text-3xl font-extrabold text-amber-400">{student.total_points}</span>
@@ -349,11 +343,10 @@ export function AdminStudentDetail({
         </div>
       </div>
 
-      {/* قسم إدارة الجوائز والأوسمة */}
       <div className="bg-slate-950 border border-slate-800 rounded-xl p-5">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-semibold text-slate-200 text-sm flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-400" /> الجوائز والأوسمة الممنوحة ({achievements.length})
+            <Trophy className="w-4 h-4 text-amber-400" /> الجوائز والأوسمة ({achievements.length})
           </h3>
           <button
             onClick={() => setAddAchOpen(true)}
@@ -364,7 +357,7 @@ export function AdminStudentDetail({
         </div>
 
         {achievements.length === 0 ? (
-          <p className="text-sm text-slate-500 py-3">لا يمتلك الطالب أي أوسمة أو جوائز حالياً.</p>
+          <p className="text-sm text-slate-500 py-3">لا يمتلك أوسمة حالياً.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {achievements.map((sa) => (
@@ -375,13 +368,13 @@ export function AdminStudentDetail({
                   </div>
                   <div>
                     <p className="font-medium text-slate-200 text-sm">{sa.achievements?.name}</p>
-                    <p className="text-xs text-slate-500">{sa.achievements?.achievement_type === "badge" ? "وسام (Badge)" : "كأس (Trophy)"}</p>
+                    <p className="text-xs text-slate-500">{sa.achievements?.achievement_type}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => handleRemoveAchievement(sa.id)}
                   className="text-slate-500 hover:text-red-400 p-1.5"
-                  title="سحب هذه الجائزة"
+                  title="سحب الجائزة"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -391,55 +384,13 @@ export function AdminStudentDetail({
         )}
       </div>
 
-      {/* سجل تغيير الأسماء */}
-      {nameChanges.length > 0 && (
-        <div className="bg-slate-950 border border-slate-800 rounded-xl p-5">
-          <h3 className="font-semibold text-slate-200 mb-3 text-sm">سجل تغيير الاسم</h3>
-          <div className="space-y-2">
-            {nameChanges.map((nc) => (
-              <div key={nc.id} className="text-sm border-b border-slate-800/60 pb-2 flex justify-between">
-                <span>
-                  <span className="line-through text-slate-500">{nc.previous_name}</span> &rarr;{" "}
-                  <strong className="text-teal-400">{nc.new_name}</strong>
-                </span>
-                <span className="text-xs text-slate-500">{new Date(nc.changed_at).toLocaleDateString()}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* محاولات الاختبارات */}
-      <div className="bg-slate-950 border border-slate-800 rounded-xl p-5">
-        <h3 className="font-semibold text-slate-200 mb-4 text-sm">محاولات الاختبارات</h3>
-        {attempts.length === 0 ? (
-          <p className="text-sm text-slate-500">لا توجد أي محاولات سابقة.</p>
-        ) : (
-          <div className="space-y-2">
-            {attempts.map((att) => (
-              <div key={att.id} className="p-3 bg-slate-900 rounded-lg flex items-center justify-between text-sm">
-                <div>
-                  <p className="font-medium text-slate-200">{att.quizzes?.name || "Quiz"}</p>
-                  <span className="text-xs text-slate-500">{new Date(att.created_at).toLocaleString()}</span>
-                </div>
-                <div className="text-right">
-                  <span className="font-bold text-slate-200">{att.percentage}%</span>
-                  <span className="block text-xs text-slate-400">{att.score} pts</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* نافذة منح وسام يدوي */}
       {addAchOpen && (
-        <Modal title="منح وسام أو جائزة للطالب" onClose={() => setAddAchOpen(false)}>
+        <Modal title="منح وسام أو كأس للطالب" onClose={() => setAddAchOpen(false)}>
           <div className="space-y-4 text-right">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">اختر الوسام / الجائزة</label>
+              <label className="block text-sm font-medium text-slate-300 mb-2">اختر الجائزة</label>
               <select
-                className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white outline-none focus:border-teal-500"
+                className="input-field"
                 value={selectedAchId}
                 onChange={(e) => setSelectedAchId(e.target.value)}
               >
