@@ -42,7 +42,6 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   useEffect(() => {
     Promise.all([studentApi.getStructure(), studentApi.getLeaderboard()])
@@ -93,7 +92,6 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
             </div>
             <div>
               <h1 className="font-bold text-slate-900 dark:text-white text-lg leading-none">Quiz Platform</h1>
-              {/* يظهر للطالب اسمه كاملاً مع الرقمين ليميز حسابه */}
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 أهلاً بك، {student.display_name}
               </p>
@@ -119,9 +117,9 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {/* ملخص الإحصائيات */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
             icon={<Trophy className="w-5 h-5" />}
             label="النقاط"
@@ -148,37 +146,30 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
           />
         </div>
 
-        {/* لوحة الصدارة */}
-        {leaderboard?.enabled && (
-          <div className="mb-6">
-            <button
-              onClick={() => setShowLeaderboard(!showLeaderboard)}
-              className="w-full flex items-center justify-between p-4 card hover:shadow-md transition-shadow bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl"
-            >
+        {/* لوحة الصدارة - مفتوحة دائماً */}
+        {leaderboard?.enabled && leaderboard.students.length > 0 && (
+          <div className="card overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Trophy className="w-6 h-6 text-amber-500" />
-                <span className="font-semibold text-slate-800 dark:text-slate-200">لوحة الشرف (Leaderboard)</span>
+                <div className="p-2 bg-amber-50 dark:bg-amber-950/40 text-amber-500 rounded-lg">
+                  <Trophy className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-slate-900 dark:text-white text-base">لوحة الشرف (Leaderboard)</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">ترتيب الطلاب وفقاً لإجمالي النقاط والمحاولات</p>
+                </div>
               </div>
-              <ChevronRight
-                className={`w-5 h-5 text-slate-400 transition-transform ${
-                  showLeaderboard ? "rotate-90" : ""
-                }`}
-              />
-            </button>
-            {showLeaderboard && leaderboard.students.length > 0 && (
-              <div className="mt-3 card overflow-hidden animate-fadeIn bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-                <LeaderboardTable
-                  students={leaderboard.students}
-                  settings={leaderboard.settings}
-                  currentStudentId={student.id}
-                />
-              </div>
-            )}
+            </div>
+            <LeaderboardTable
+              students={leaderboard.students}
+              settings={leaderboard.settings}
+              currentStudentId={student.id}
+            />
           </div>
         )}
 
         {/* مسار التنقل Breadcrumb */}
-        <div className="card p-4 mb-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+        <div className="card p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
           <div className="flex items-center gap-1.5 text-sm flex-wrap">
             <button
               onClick={() => {
@@ -466,11 +457,9 @@ function LeaderboardTable({
       case "rank":
         return rank;
       case "display_name": {
-        // إذا كان الحساب يخص الطالب نفسه: يظهر اسمه مع الرقمين
         if (st.id === currentStudentId) {
           return st.display_name;
         }
-        // إذا كان طالباً آخر: يتم إخفاء الرقمين الأخيرين تلقائياً
         return st.display_name.replace(/\d{2}$/, "").trim();
       }
       case "total_points":
