@@ -98,7 +98,11 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
             </div>
           </div>
           <div className="flex items-center gap-2">
-            
+            <a
+              href="#admin"
+              className="btn-ghost flex items-center gap-1.5 text-xs font-semibold text-teal-600 dark:text-teal-400 border border-teal-500/30 px-3 py-1.5 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-950/40"
+              title="لوحة الإدارة"
+            >
               <Shield className="w-4 h-4" />
               <span>لوحة الإدارة</span>
             </a>
