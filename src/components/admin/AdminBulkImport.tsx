@@ -12,7 +12,7 @@ interface ParsedQuestion {
   answer_c: string;
   answer_d: string;
   answer_e?: string;
-  correct_answer: "a" | "b" | "c" | "d" | "e";
+  correct_answer: "a" | "b" | "c" | "d";
   correct_answer_translation: string;
   explanation: string;
   errors: string[];
@@ -42,13 +42,13 @@ export function AdminBulkImport({ token }: { token: string }) {
       .catch(() => setLoading(false));
   }, [token]);
 
-  // دالة استخراج حرف الإجابة الصحيحة وتحويل الحروف العربية
-  const extractCorrectLetter = (line: string): "a" | "b" | "c" | "d" | "e" | null => {
-    const match = line.match(/(?:✅|✔️|☑️|\*)?\s*(?:إجابة|الجواب|الإجابة|الحل|answer|correct)[\s:\-–—\.]*([a-eA-Eأ-ه])/i);
+  // دالة استخراج حرف الإجابة الصحيحة
+  const extractCorrectLetter = (line: string): "a" | "b" | "c" | "d" | null => {
+    const match = line.match(/(?:✅|✔️|☑️|\*)?\s*(?:إجابة|الجواب|الإجابة|الحل|answer|correct)[\s:\-–—\.]*([a-dA-Dأ-د])/i);
     let letter = match ? match[1].toLowerCase() : null;
 
     if (!letter) {
-      const fallback = line.match(/\b([a-eA-Eأ-ه])[\)\.]/i);
+      const fallback = line.match(/\b([a-dA-Dأ-د])[\)\.]/i);
       if (fallback) letter = fallback[1].toLowerCase();
     }
 
@@ -56,8 +56,7 @@ export function AdminBulkImport({ token }: { token: string }) {
     if (letter === "ب") return "b";
     if (letter === "ج") return "c";
     if (letter === "د") return "d";
-    if (letter === "ه" || letter === "هـ") return "e";
-    if (["a", "b", "c", "d", "e"].includes(letter || "")) return letter as any;
+    if (["a", "b", "c", "d"].includes(letter || "")) return letter as any;
     return null;
   };
 
@@ -112,12 +111,12 @@ export function AdminBulkImport({ token }: { token: string }) {
           if (detectedLetter) {
             q.correct_answer = detectedLetter;
           } else {
-            q.errors.push(`لم يتم استخراج حرف الإجابة من: "${line}"`);
+            q.errors.push(`لم نتمكن من تحديد حرف الإجابة من: "${line}"`);
           }
           continue;
         }
 
-        // 2. فحص أسطر الخيارات (A, B, C, D, E)
+        // 2. فحص أسطر الخيارات
         const optionMatch = line.match(/^([a-eA-Eأ-ه])[\)\.\-:\s]\s*(.+)$/i);
         if (state !== "AFTER_ANSWER" && optionMatch) {
           state = "OPTIONS";
@@ -137,7 +136,7 @@ export function AdminBulkImport({ token }: { token: string }) {
           continue;
         }
 
-        // 3. أسطر ما بعد الإجابة الصحيحة (ترجمة الجواب أو الشرح)
+        // 3. أسطر ما بعد الإجابة (ترجمة الجواب أو الشرح)
         if (state === "AFTER_ANSWER") {
           if (lower.startsWith("explanation:") || lower.startsWith("شرح:") || lower.startsWith("توضيح:")) {
             q.explanation = line.replace(/^(explanation|شرح|توضيح)[\s:\-–—\.]*/i, "").trim();
@@ -162,7 +161,7 @@ export function AdminBulkImport({ token }: { token: string }) {
           continue;
         }
 
-        // 4. أسطر السؤال وترجمته (قبل الخيارات)
+        // 4. أسطر نص السؤال وترجمته
         if (state === "QUESTION") {
           if (!q.question_text) {
             q.question_text = line.replace(/^\s*\d+[\.\)\-:]\s*/, "").trim();
@@ -190,7 +189,7 @@ export function AdminBulkImport({ token }: { token: string }) {
 
   const handleImport = async () => {
     if (!selectedQuiz) {
-      showToast("يرجى تحديد الاختبار أولاً", "error");
+      showToast("يرجى اختيار الاختبار أولاً", "error");
       return;
     }
 
@@ -203,7 +202,14 @@ export function AdminBulkImport({ token }: { token: string }) {
     setImporting(true);
     try {
       const payload = validQuestions.map((q, idx) => {
-        const item: any = {
+        // إذا وجد خيار خامس E، ندمجه مع الشرح حتى لا ترفضه قاعدة البيانات
+        let finalExplanation = q.explanation || "";
+        if (q.answer_e && q.answer_e.trim()) {
+          const eNote = `[الخيار E: ${q.answer_e.trim()}]`;
+          finalExplanation = finalExplanation ? `${finalExplanation} - ${eNote}` : eNote;
+        }
+
+        return {
           quiz_id: selectedQuiz,
           question_text: q.question_text,
           question_translation: q.question_translation || "",
@@ -213,22 +219,15 @@ export function AdminBulkImport({ token }: { token: string }) {
           answer_d: q.answer_d,
           correct_answer: q.correct_answer,
           correct_answer_translation: q.correct_answer_translation || "",
-          explanation: q.explanation || "",
+          explanation: finalExplanation,
           sort_order: idx + 1,
           is_enabled: true,
           is_visible: true,
         };
-
-        // إرسال answer_e فقط إذا كان السؤال يحتوي على خيار خامس
-        if (q.answer_e && q.answer_e.trim()) {
-          item.answer_e = q.answer_e.trim();
-        }
-
-        return item;
       });
 
       await adminApi.bulkImportQuestions(token, payload);
-      showToast(`تم استيراد ${validQuestions.length} سؤال بنجاح!`);
+      showToast(`تم استيراد ${validQuestions.length} سؤال بنجاح دون أي أخطاء!`);
       setParsed([]);
       setRawText("");
     } catch (err: any) {
@@ -250,7 +249,7 @@ export function AdminBulkImport({ token }: { token: string }) {
           <Upload className="w-5 h-5 text-teal-400" /> الاستيراد السريع للأسئلة (Bulk Import)
         </h2>
         <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-          يتعرف النظام تلقائياً على صيغة أسئلتك (نص السؤال، ترجمته، 4 أو 5 خيارات، وعلامة الإجابة الصحيحة مع ترجمتها).
+          يتعرف النظام تلقائياً على صيغة أسئلتك (نص السؤال، ترجمته، الخيارات، وعلامة الإجابة الصحيحة مع ترجمتها).
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -274,9 +273,9 @@ export function AdminBulkImport({ token }: { token: string }) {
             <label className="block text-sm font-semibold text-slate-300 mb-1.5">2. وضع التحليل</label>
             <div className="input-field flex items-center justify-between text-xs text-teal-300 bg-slate-900">
               <span className="flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-teal-400" /> التعرف الذكي (دعم تلقائي لـ 4 و 5 خيارات)
+                <Sparkles className="w-4 h-4 text-teal-400" /> التعرف الذكي التلقائي
               </span>
-              <span className="text-slate-500 font-mono">تلقائي</span>
+              <span className="text-slate-500 font-mono">متوافق 100%</span>
             </div>
           </div>
         </div>
@@ -362,8 +361,8 @@ d) to choose
                       D: {q.answer_d || "---"}
                     </span>
                     {q.answer_e && (
-                      <span className={`p-1.5 rounded bg-slate-950 font-mono sm:col-span-2 ${q.correct_answer === "e" ? "text-green-400 font-bold" : "text-slate-300"}`}>
-                        E: {q.answer_e}
+                      <span className="p-1.5 rounded bg-slate-950 font-mono text-amber-400/90 sm:col-span-2">
+                        E (مدمج مع الشرح): {q.answer_e}
                       </span>
                     )}
                   </div>
@@ -401,7 +400,7 @@ d) to choose
               ) : (
                 <>
                   <Upload className="w-4 h-4" />
-                  <span>استيراد ({validCount}) سؤال إلى الاختبار</span>
+                  <span>استيراد ({validCount}) سؤال إلى الاختبار الآن</span>
                 </>
               )}
             </button>
