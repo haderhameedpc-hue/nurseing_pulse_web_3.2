@@ -1,20 +1,20 @@
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, Wand2, FileCode, CheckCircle2, HelpCircle } from "lucide-react";
+import { Plus, Edit2, Trash2, Wand2, FileCode, CheckCircle2 } from "lucide-react";
 import { adminApi, QuestionTemplate } from "@/lib/api";
 import { Modal, ConfirmDialog, useToast, LoadingSpinner, EmptyState } from "./shared";
 
-// تعريف أنواع الحقول المتاحة لكل سطر
-export const LINE_ROLES: { value: string; label: string; color: string }[] = [
+export const LINE_ROLES = [
   { value: "question_text", label: "نص السؤال (Question Text)", color: "text-teal-400 bg-teal-950/60" },
   { value: "question_translation", label: "ترجمة السؤال (Translation)", color: "text-blue-400 bg-blue-950/60" },
   { value: "answer_a", label: "الخيار A (Option A)", color: "text-amber-400 bg-amber-950/60" },
   { value: "answer_b", label: "الخيار B (Option B)", color: "text-amber-400 bg-amber-950/60" },
   { value: "answer_c", label: "الخيار C (Option C)", color: "text-amber-400 bg-amber-950/60" },
   { value: "answer_d", label: "الخيار D (Option D)", color: "text-amber-400 bg-amber-950/60" },
-  { value: "correct_answer", label: "رمز الإجابة الصحيحة (A/B/C/D)", color: "text-green-400 bg-green-950/60" },
+  { value: "answer_e", label: "الخيار E (اختياري)", color: "text-amber-400 bg-amber-950/60" },
+  { value: "correct_answer", label: "رمز الإجابة الصحيحة (A/B/C/D/E)", color: "text-green-400 bg-green-950/60" },
   { value: "correct_answer_translation", label: "ترجمة الحل الصحيح", color: "text-cyan-400 bg-cyan-950/60" },
   { value: "explanation", label: "الشرح والتوضيح (Explanation)", color: "text-purple-400 bg-purple-950/60" },
-  { value: "ignore", label: "تجاهل هذا السطر (Ignore)", color: "text-slate-400 bg-slate-800" },
+  { value: "ignore", label: "تجاهل السطر (Ignore)", color: "text-slate-400 bg-slate-800" },
 ];
 
 export function AdminTemplates({ token }: { token: string }) {
@@ -72,7 +72,7 @@ export function AdminTemplates({ token }: { token: string }) {
             <FileCode className="w-5 h-5 text-teal-400" /> نماذج الأسئلة (Question Templates)
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            قم بتعريف ترتيب الأسطر لسؤال تجريبي، وسيقوم النظام بتطبيقه تلقائياً عند استيراد كميات كبيرة من الأسئلة.
+            الصق سؤالاً واحداً وحدد دور كل سطر ليقوم النظام بفهم نمط أسئلتك تلقائياً عند الاستيراد.
           </p>
         </div>
         <button onClick={() => setCreateOpen(true)} className="btn-primary flex items-center gap-2 text-sm py-2">
@@ -81,18 +81,18 @@ export function AdminTemplates({ token }: { token: string }) {
       </div>
 
       {templates.length === 0 ? (
-        <EmptyState message="لم يتم إنشاء أي نماذج حتى الآن. أنشئ نموذجك الأول لتبسيط استيراد الأسئلة." />
+        <EmptyState message="لم يتم إنشاء أي نماذج بعد. أنشئ نموذجك الأول لتخصيص الاستيراد." />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {templates.map((t) => {
             const rules = (t.parsing_rules as any) || {};
             const lineMapping: string[] = rules.line_mapping || [];
             return (
-              <div key={t.id} className="bg-slate-950 border border-slate-800 rounded-xl p-5 shadow-sm space-y-4">
+              <div key={t.id} className="bg-slate-950 border border-slate-800 rounded-xl p-5 shadow-sm space-y-3">
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="font-bold text-slate-100 text-base">{t.name}</h3>
-                    <p className="text-xs text-teal-400 mt-0.5">يتكون من {lineMapping.length} أسطر لكل سؤال</p>
+                    <p className="text-xs text-teal-400 mt-0.5">نموذج يتكون من {lineMapping.length} أسطر</p>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
@@ -112,9 +112,8 @@ export function AdminTemplates({ token }: { token: string }) {
                   </div>
                 </div>
 
-                {/* استعراض الأدوار المحددة لكل سطر */}
-                <div className="space-y-1.5 bg-slate-900/60 p-3 rounded-lg border border-slate-800/80">
-                  <span className="text-[11px] font-semibold text-slate-400 block mb-1">ترتيب الأسطر في هذا النموذج:</span>
+                <div className="space-y-1.5 bg-slate-900/60 p-3 rounded-lg border border-slate-800">
+                  <span className="text-[11px] font-semibold text-slate-400 block mb-1">أدوار الأسطر:</span>
                   <div className="flex flex-wrap gap-1.5">
                     {lineMapping.map((role, idx) => {
                       const item = LINE_ROLES.find((r) => r.value === role);
@@ -126,15 +125,6 @@ export function AdminTemplates({ token }: { token: string }) {
                     })}
                   </div>
                 </div>
-
-                {t.template_text && (
-                  <details className="text-xs text-slate-500">
-                    <summary className="cursor-pointer hover:text-slate-300 select-none">عرض نص السؤال النموذجي</summary>
-                    <pre className="mt-2 p-2.5 bg-slate-900 rounded font-mono text-[11px] text-slate-400 overflow-x-auto whitespace-pre-wrap">
-                      {t.template_text}
-                    </pre>
-                  </details>
-                )}
               </div>
             );
           })}
@@ -182,15 +172,14 @@ function TemplateBuilderModal({
   const [name, setName] = useState(template?.name || "");
   const [sampleText, setSampleText] = useState(
     template?.template_text ||
-      `1. What is the normal resting heart rate for an adult?
-ما هو معدل ضربات القلب الطبيعي أثناء الراحة للبالغين؟
-a) 40 - 60 bpm
-b) 60 - 100 bpm
-c) 100 - 120 bpm
-d) 120 - 140 bpm
-Answer: b
-الإجابة: 60 - 100 نبضة بالدقيقة
-Explanation: Normal resting heart rate for adults ranges from 60 to 100 beats per minute.`
+`1.a question?
+ترجمة السؤال
+a) to choose
+b) to choose
+c) to choose
+d) to choose
+✅ الإجابة: b) answer
+ترجمه الجواب`
   );
 
   const [lines, setLines] = useState<string[]>([]);
@@ -198,7 +187,6 @@ Explanation: Normal resting heart rate for adults ranges from 60 to 100 beats pe
     ((template?.parsing_rules as any)?.line_mapping as string[]) || []
   );
 
-  // تقسيم النص إلى أسطر
   useEffect(() => {
     const rawLines = sampleText
       .split("\n")
@@ -206,78 +194,64 @@ Explanation: Normal resting heart rate for adults ranges from 60 to 100 beats pe
       .filter((l) => l.length > 0);
     setLines(rawLines);
 
-    // إذا لم يكن هناك خريطة محفوظة سابقة، نقوم بالاكتشاف التلقائي الأولي
     if (lineMapping.length === 0 || lineMapping.length !== rawLines.length) {
-      autoGuessMapping(rawLines);
+      autoGuess(rawLines);
     }
   }, [sampleText]);
 
-  // دالة الذكاء الاصطناعي لاكتشاف معنى كل سطر تلقائياً
-  const autoGuessMapping = (inputLines: string[]) => {
+  const autoGuess = (inputLines: string[]) => {
     const guessed: string[] = [];
-    let optionCount = 0;
+    let optCount = 0;
 
     inputLines.forEach((line, idx) => {
       const lower = line.toLowerCase();
 
-      // سطر السؤال الأول
       if (idx === 0) {
         guessed.push("question_text");
         return;
       }
-
-      // ترجمة السؤال (إذا كانت بعد السؤال وقبل الخيارات)
-      if (idx === 1 && !/^[a-d\d][\.\)]/i.test(line) && !lower.startsWith("answer")) {
+      if (idx === 1 && !/^[a-eأ-ه][\.\)\-:]/i.test(line) && !line.includes("إجابة") && !line.includes("answer") && !line.includes("✅")) {
         guessed.push("question_translation");
         return;
       }
-
-      // الخيارات
-      if (/^[aAأ١][\.\)\-\s]/i.test(line) || (optionCount === 0 && (lower.startsWith("a)") || lower.startsWith("a.")))) {
+      if (/^[aAأ][\.\)\-:]/i.test(line)) {
         guessed.push("answer_a");
-        optionCount++;
+        optCount++;
         return;
       }
-      if (/^[bBب٢][\.\)\-\s]/i.test(line) || (optionCount === 1 && (lower.startsWith("b)") || lower.startsWith("b.")))) {
+      if (/^[bBب][\.\)\-:]/i.test(line)) {
         guessed.push("answer_b");
-        optionCount++;
+        optCount++;
         return;
       }
-      if (/^[cCج٣][\.\)\-\s]/i.test(line) || (optionCount === 2 && (lower.startsWith("c)") || lower.startsWith("c.")))) {
+      if (/^[cCج][\.\)\-:]/i.test(line)) {
         guessed.push("answer_c");
-        optionCount++;
+        optCount++;
         return;
       }
-      if (/^[dDد٤][\.\)\-\s]/i.test(line) || (optionCount === 3 && (lower.startsWith("d)") || lower.startsWith("d.")))) {
+      if (/^[dDد][\.\)\-:]/i.test(line)) {
         guessed.push("answer_d");
-        optionCount++;
+        optCount++;
         return;
       }
-
-      // الإجابة الصحيحة
-      if (lower.startsWith("ans") || lower.startsWith("correct") || lower.startsWith("إجابة") || lower.startsWith("الجواب")) {
+      if (/^[eEه][\.\)\-:]/i.test(line)) {
+        guessed.push("answer_e");
+        optCount++;
+        return;
+      }
+      if (line.includes("✅") || line.includes("إجابة") || line.includes("الجواب") || lower.includes("answer")) {
         guessed.push("correct_answer");
         return;
       }
-
-      // ترجمة الإجابة الصحيحة
-      if (lower.includes("translation") || lower.startsWith("ترجمة") || lower.includes("حل")) {
+      if (line.includes("ترجم") || lower.includes("translation")) {
         guessed.push("correct_answer_translation");
         return;
       }
-
-      // الشرح والتوضيح
-      if (lower.startsWith("exp") || lower.startsWith("شرح") || lower.startsWith("توضيح")) {
+      if (line.includes("شرح") || lower.includes("explanation")) {
         guessed.push("explanation");
         return;
       }
-
-      // الحالة الافتراضية
-      if (optionCount < 4) {
-        guessed.push("question_text");
-      } else {
-        guessed.push("explanation");
-      }
+      guessed.push("ignore");
     });
 
     setLineMapping(guessed);
@@ -289,7 +263,7 @@ Explanation: Normal resting heart rate for adults ranges from 60 to 100 beats pe
     setLineMapping(updated);
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
@@ -306,14 +280,14 @@ Explanation: Normal resting heart rate for adults ranges from 60 to 100 beats pe
 
   return (
     <Modal title={template ? "تعديل النموذج" : "إنشاء نموذج أسئلة جديد"} onClose={onClose} wide>
-      <form onSubmit={handleFormSubmit} className="space-y-5 text-right">
+      <form onSubmit={handleSubmit} className="space-y-4 text-right">
         <div>
           <label className="block text-sm font-semibold text-slate-200 mb-1">اسم النموذج</label>
           <input
             className="input-field"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="مثال: نموذج أسئلة مع ترجمة وشرح (9 أسطر)"
+            placeholder="مثال: نموذج أسئلة تمريض (4 أو 5 خيارات مع ترجمة)"
             required
             autoFocus
           />
@@ -321,38 +295,37 @@ Explanation: Normal resting heart rate for adults ranges from 60 to 100 beats pe
 
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-slate-400">الصق هنا سؤالاً واحداً فقط كمثال لاختبار ترتيب الأسطر:</span>
+            <span className="text-xs text-slate-400">سؤال تجريبي لتحديد ترتيب الأسطر:</span>
             <button
               type="button"
-              onClick={() => autoGuessMapping(lines)}
+              onClick={() => autoGuess(lines)}
               className="text-xs text-teal-400 hover:text-teal-300 flex items-center gap-1 font-semibold"
             >
-              <Wand2 className="w-3.5 h-3.5" /> إعادة الاكتشاف التلقائي للأدوار
+              <Wand2 className="w-3.5 h-3.5" /> إعادة التعرف التلقائي للأدوار
             </button>
           </div>
           <textarea
-            className="input-field font-mono text-xs leading-relaxed"
-            rows={6}
+            className="input-field font-mono text-xs leading-relaxed text-left"
+            dir="ltr"
+            rows={7}
             value={sampleText}
             onChange={(e) => setSampleText(e.target.value)}
-            placeholder="الصق نموذج السؤال هنا..."
           />
         </div>
 
-        {/* جدول تحديد معنى كل سطر */}
-        <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950 p-3 space-y-3">
+        <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950 p-3 space-y-2">
           <div className="flex items-center justify-between border-b border-slate-800 pb-2">
             <h4 className="text-sm font-bold text-slate-200 flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-teal-400" /> حدد معنى كل سطر من أسطر السؤال:
+              <CheckCircle2 className="w-4 h-4 text-teal-400" /> حدد معنى كل سطر:
             </h4>
-            <span className="text-xs text-slate-400 font-mono">إجمالي: {lines.length} أسطر</span>
+            <span className="text-xs text-slate-400 font-mono">{lines.length} أسطر</span>
           </div>
 
-          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
             {lines.map((line, idx) => (
               <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 rounded-lg bg-slate-900 border border-slate-800/80">
                 <span className="text-xs font-mono font-bold text-teal-400 w-16 shrink-0">سطر {idx + 1}:</span>
-                <p className="text-xs text-slate-300 font-mono truncate flex-1" title={line}>
+                <p className="text-xs text-slate-300 font-mono truncate flex-1 text-left" dir="auto" title={line}>
                   {line}
                 </p>
                 <select
