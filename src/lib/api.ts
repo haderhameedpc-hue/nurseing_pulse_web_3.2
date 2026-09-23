@@ -119,7 +119,7 @@ export interface AttemptAnswer {
   id: string;
   attempt_id: string;
   question_id: string;
-  student_answer: "a" | "b" | "c" | "d" | null;
+  student_answer: "a" | "b" | "c" | "d" | "e"; null;
   correct_answer: "a" | "b" | "c" | "d";
   is_correct: boolean;
   time_spent_seconds: number;
