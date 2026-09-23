@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { CheckCircle2, XCircle, ArrowRight, X, Globe, Lightbulb, Timer } from "lucide-react";
+import { CheckCircle2, XCircle, ArrowRight, X, Globe, Lightbulb, Timer, AlertCircle } from "lucide-react";
 import type { Quiz, Question } from "@/lib/api";
 import { studentApi } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
@@ -8,11 +8,21 @@ interface QuizPlayerProps {
   quiz: Quiz;
   studentId: string;
   mode: "timed" | "untimed";
+  questionIds?: string[];
+  isRetryWrong?: boolean;
   onComplete: (result: any) => void;
   onExit: () => void;
 }
 
-export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPlayerProps) {
+export function QuizPlayer({
+  quiz,
+  studentId,
+  mode,
+  questionIds,
+  isRetryWrong = false,
+  onComplete,
+  onExit,
+}: QuizPlayerProps) {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -26,17 +36,22 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
   const answersRef = useRef<Record<string, { answer: string; time_spent: number }>>({});
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // جلب الأسئلة كاملة بما فيها الخيار E مباشرة من Supabase
+  // جلب الأسئلة مع دعم فلترة الأسئلة الخاطئة فقط عند إعادة المحاولة
   useEffect(() => {
     async function fetchQuestions() {
       try {
-        const { data, error: qErr } = await supabase
+        let query = supabase
           .from("questions")
           .select("*")
           .eq("quiz_id", quiz.id)
           .eq("is_enabled", true)
-          .eq("is_visible", true)
-          .order("sort_order");
+          .eq("is_visible", true);
+
+        if (questionIds && questionIds.length > 0) {
+          query = query.in("id", questionIds);
+        }
+
+        const { data, error: qErr } = await query.order("sort_order");
 
         if (qErr) throw qErr;
         setQuestions(data || []);
@@ -47,7 +62,7 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
       }
     }
     fetchQuestions();
-  }, [quiz.id]);
+  }, [quiz.id, questionIds]);
 
   const handleTimeExpired = useCallback(() => {
     setShowFeedback(true);
@@ -102,6 +117,35 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
   const submitQuiz = async () => {
     setSubmitting(true);
     const completionTime = Math.floor((Date.now() - quizStartTime) / 1000);
+
+    // حساب الأسئلة الخاطئة محلياً بدقة
+    const wrongIds = questions
+      .filter((q) => answersRef.current[q.id]?.answer !== q.correct_answer)
+      .map((q) => q.id);
+
+    // في حال كان تدريباً على الأسئلة الخاطئة فقط: نحسب النتيجة محلياً لعدم كسر إحصائيات الطالب الرسمية
+    if (isRetryWrong) {
+      const correctCount = questions.length - wrongIds.length;
+      const percentage = Math.round((correctCount / questions.length) * 100);
+      onComplete({
+        attempt_id: "",
+        correct: correctCount,
+        wrong: wrongIds.length,
+        total: questions.length,
+        percentage,
+        earned_points: 0,
+        timed_bonus: 0,
+        total_score: 0,
+        max_score: 0,
+        is_100: wrongIds.length === 0,
+        completion_time: completionTime,
+        answers: answersRef.current,
+        wrong_question_ids: wrongIds,
+        isPractice: true,
+      });
+      return;
+    }
+
     try {
       const result = await studentApi.submitAttempt({
         student_id: studentId,
@@ -110,6 +154,7 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
         answers: answersRef.current,
         completion_time_seconds: completionTime,
       });
+
       onComplete({
         attempt_id: result.attempt_id,
         correct: result.correct_answers,
@@ -123,6 +168,7 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
         is_100: result.is_100_percent,
         completion_time: result.completion_time_seconds,
         answers: answersRef.current,
+        wrong_question_ids: wrongIds,
       });
     } catch (err: any) {
       setError(err.message || "فشل إرسال الإجابات.");
@@ -156,7 +202,7 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
         <div className="card p-8 max-w-md text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-          <p className="text-slate-800 dark:text-slate-200 mb-4">لا توجد أسئلة في هذا الاختبار بعد.</p>
+          <p className="text-slate-800 dark:text-slate-200 mb-4">لا توجد أسئلة متبقية في هذا الاختبار.</p>
           <button onClick={onExit} className="btn-primary">
             العودة
           </button>
@@ -168,7 +214,6 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
   const q = questions[currentIdx];
   const isCorrect = selectedAnswer === q.correct_answer;
 
-  // دعم الخيارات من A إلى E
   const answers = [
     { key: "a", text: q.answer_a },
     { key: "b", text: q.answer_b },
@@ -185,6 +230,14 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+      {/* شريط الإشعار عند إعادة محاولة الأخطاء فقط */}
+      {isRetryWrong && (
+        <div className="bg-amber-500/15 border-b border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs py-1.5 px-4 text-center font-bold flex items-center justify-center gap-1.5">
+          <AlertCircle className="w-4 h-4" />
+          <span>وضع تصحيح الأخطاء: يتم اختبارك في الأسئلة الخاطئة فقط ({questions.length} أسئلة)</span>
+        </div>
+      )}
+
       {/* الشريط العلوي */}
       <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-20">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -228,10 +281,17 @@ export function QuizPlayer({ quiz, studentId, mode, onComplete, onExit }: QuizPl
         >
           <div className="mb-6 text-left" dir="ltr">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-relaxed">{q.question_text}</h2>
-            {quiz.show_translations && q.question_translation && (
-              <div className="mt-3 flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-900 text-right" dir="rtl">
+
+            {/* ترجمة السؤال: تظهر فقط عند الاختيار (showFeedback) */}
+            {showFeedback && quiz.show_translations && q.question_translation && (
+              <div
+                className="mt-3 flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-900 text-right animate-fadeIn"
+                dir="rtl"
+              >
                 <Globe className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                <p className="text-sm text-blue-900 dark:text-blue-300 leading-relaxed">{q.question_translation}</p>
+                <p className="text-sm text-blue-900 dark:text-blue-300 leading-relaxed font-medium">
+                  {q.question_translation}
+                </p>
               </div>
             )}
           </div>
