@@ -157,7 +157,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
         </div>
 
         {/* Quiz Navigation Content */}
-        <div className="card p-6">
+        <div className="card p-6 mb-4">
           {!selectedStage && (
             <>
               <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
