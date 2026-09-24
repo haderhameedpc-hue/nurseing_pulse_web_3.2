@@ -92,7 +92,7 @@ function App() {
      
       title="Admin Panel"
     >
-      <Shield className="w-5 h-5" />
+    
     </a>
   );
 
