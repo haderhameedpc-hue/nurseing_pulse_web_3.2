@@ -121,7 +121,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
             <button onClick={onOpenSettings} className="btn-ghost justify-center p-2" title="الإعدادات">
               <Settings className="w-5 h-5" />
             </button>
-            <button onClick={onLogout} className="btn-ghost" title="تسجيل الخروج">
+            <button onClick={onLogout} className="btn-ghost justify-center p-2" title="تسجيل الخروج">
               <LogOut className="w-5 h-5" />
             </button>
           </div>
