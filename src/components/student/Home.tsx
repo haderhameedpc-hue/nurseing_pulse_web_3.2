@@ -112,7 +112,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
             
             <a
               href="#admin"
-              className="btn-ghost justify-center p-2 "
+              className="btn-ghost justify-center p-2 hover:text-sky-500 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors "
               title="لوحة الإدارة"
             >
               <Shield className="w-5 h-5" />
