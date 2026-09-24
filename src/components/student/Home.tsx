@@ -91,7 +91,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-slate-900 dark:text-white text-lg leading-none">Quiz Platform</h1>
+              <h1 className="font-bold text-slate-900 dark:text-white text-lg leading-none">منصة الاختبار</h1>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 أهلاً بك، {student.display_name}
               </p>
