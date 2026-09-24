@@ -86,7 +86,9 @@ function App() {
     );
   }
 
-  
+  const adminLink = (
+    
+  );
 
   switch (view.name) {
     case "home":
