@@ -18,6 +18,7 @@ import {
 import type { Student, Stage, Course, Subject, Folder, Quiz, LeaderboardSettings } from "@/lib/api";
 import { studentApi } from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Send } from 'lucide-react';
 
 interface HomeProps {
   student: Student;
