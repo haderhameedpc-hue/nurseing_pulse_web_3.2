@@ -118,7 +118,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
               <Shield className="w-5 h-5" />
             </a>
             <ThemeToggle />
-            <button onClick={onOpenSettings} className="btn-ghost justify-center p-2" title="الإعدادات">
+            <button onClick={onOpenSettings} className="btn-ghost justify-center p-2 hover:text-sky-500 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="الإعدادات">
               <Settings className="w-5 h-5" />
             </button>
             <button onClick={onLogout} className="btn-ghost justify-center p-2" title="تسجيل الخروج">
