@@ -85,7 +85,7 @@ export function Registration({ onRegistered }: { onRegistered: (student: Student
             <GraduationCap className="w-10 h-10 text-teal-400" />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">منصة الاختبار التفاعلي</h1>
-          <p className="text-slate-400 text-sm">Interactive Learning & Assessment</p>
+          <p className="text-slate-400 text-sm"> من تصميم واعداد -حيدر حميد- </p>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-8 animate-fadeIn">
