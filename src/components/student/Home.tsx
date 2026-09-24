@@ -99,6 +99,17 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
             </div>
           </div>
           <div className="flex items-center gap-0">
+
+            <a
+  href="https://t.me/H_98da"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="btn-ghost flex items-center justify-center p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+  title="تواصل عبر تيليجرام"
+>
+  <Send className="w-5 h-5" />
+</a>
+            
             <a
               href="#admin"
               className="btn-ghost "
