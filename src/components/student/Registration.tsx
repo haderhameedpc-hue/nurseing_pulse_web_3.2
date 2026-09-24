@@ -109,6 +109,7 @@ export function Registration({ onRegistered }: { onRegistered: (student: Student
               <p className="text-xs text-slate-400 leading-relaxed text-right">
                 اكتب اسمك متبوعاً برقمين في النهاية (مثل: <strong>أحمد علي12</strong>). 
                 إذا كان لديك حساب سابق ستدخل فوراً، وإذا كانت هذه أول مرة سيتم إنشاء حسابك تلقائياً.
+                ستعرف فائدة الاسم بعد الدخول 😄
               </p>
             </div>
 
