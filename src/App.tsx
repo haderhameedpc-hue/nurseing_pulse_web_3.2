@@ -87,7 +87,13 @@ function App() {
   }
 
   const adminLink = (
-    
+    <a
+      href="#admin"
+      className="fixed bottom-4 right-4 p-3 bg-slate-800 text-white rounded-full shadow-lg hover:bg-slate-700 transition-colors z-40 opacity-40 hover:opacity-100"
+      title="Admin Panel"
+    >
+      <Shield className="w-5 h-5" />
+    </a>
   );
 
   switch (view.name) {
