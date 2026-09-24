@@ -105,7 +105,7 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
             >
               <Shield className="w-5 h-5" />
             </a>
-            <ThemeToggle />
+          
             <button onClick={onOpenSettings} className="btn-ghost" title="الإعدادات">
               <Settings className="w-5 h-5" />
             </button>
