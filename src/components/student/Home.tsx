@@ -98,7 +98,13 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
             </div>
           </div>
           <div className="flex items-center gap-0">
-            
+            <a
+              href="#admin"
+              className="btn-ghost "
+              title="لوحة الإدارة"
+            >
+              <Shield className="w-5 h-5" />
+            </a>
             <ThemeToggle />
             <button onClick={onOpenSettings} className="btn-ghost" title="الإعدادات">
               <Settings className="w-5 h-5" />
