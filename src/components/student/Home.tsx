@@ -6,7 +6,7 @@ import {
   TrendingUp,
   Settings,
   LogOut,
-  ChevronRight,
+  ChevronLeft,
   FolderOpen,
   FileText,
   Layers,
@@ -14,11 +14,11 @@ import {
   ListChecks,
   Shield,
   GraduationCap,
+  Send,
 } from "lucide-react";
 import type { Student, Stage, Course, Subject, Folder, Quiz, LeaderboardSettings } from "@/lib/api";
 import { studentApi } from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Send } from 'lucide-react';
 
 interface HomeProps {
   student: Student;
@@ -47,11 +47,11 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
   useEffect(() => {
     Promise.all([studentApi.getStructure(), studentApi.getLeaderboard()])
       .then(([struct, lb]) => {
-        setStages(struct.stages);
-        setCourses(struct.courses);
-        setSubjects(struct.subjects);
-        setFolders(struct.folders);
-        setQuizzes(struct.quizzes);
+        setStages(struct?.stages || []);
+        setCourses(struct?.courses || []);
+        setSubjects(struct?.subjects || []);
+        setFolders(struct?.folders || []);
+        setQuizzes(struct?.quizzes || []);
         setLeaderboard(lb);
         setLoading(false);
       })
@@ -83,45 +83,52 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+    <div dir="rtl" className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors text-right">
       {/* Header */}
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-teal-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-teal-600 rounded-lg flex items-center justify-center shrink-0">
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
             <div>
               <h1 className="font-bold text-slate-900 dark:text-white text-lg leading-none">منصة الاختبار</h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 أهلاً بك، {student.display_name}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-0">
+            <a
+              href="https://t.me/H_98da"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-ghost flex items-center justify-center p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="تواصل عبر تيليجرام"
+            >
+              <Send className="w-5 h-5" />
+            </a>
 
             <a
-  href="https://t.me/H_98da"
-  target="_blank"
-  rel="noopener noreferrer"
-  className="btn-ghost flex items-center justify-center p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:text-sky-500 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-  title="تواصل عبر تيليجرام"
->
-  <Send className="w-5 h-5" />
-</a>
-            
-            <a
               href="#admin"
-              className="btn-ghost justify-center p-2 hover:text-sky-500 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors "
+              className="btn-ghost flex items-center justify-center p-2 hover:text-sky-500 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               title="لوحة الإدارة"
             >
               <Shield className="w-5 h-5" />
             </a>
             <ThemeToggle />
-            <button onClick={onOpenSettings} className="btn-ghost justify-center p-2 hover:text-sky-500 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="الإعدادات">
+            <button
+              onClick={onOpenSettings}
+              className="btn-ghost flex items-center justify-center p-2 hover:text-sky-500 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="الإعدادات"
+            >
               <Settings className="w-5 h-5" />
             </button>
-            <button onClick={onLogout} className="btn-ghost justify-center p-2 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="تسجيل الخروج">
+            <button
+              onClick={onLogout}
+              className="btn-ghost flex items-center justify-center p-2 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="تسجيل الخروج"
+            >
               <LogOut className="w-5 h-5" />
             </button>
           </div>
@@ -129,10 +136,9 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
       </header>
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
-
         {/* مسار التنقل Breadcrumb */}
-        <div className="card p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-          <div className="flex items-center gap-1.5 text-sm flex-wrap">
+        <div className="card p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-full">
+          <div className="flex items-center gap-2 text-sm flex-wrap">
             <button
               onClick={() => {
                 setSelectedStage(null);
@@ -140,20 +146,20 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
                 setSelectedSubject(null);
                 setSelectedFolder(null);
               }}
-              className="text-teal-600 dark:text-teal-400 hover:underline font-medium"
+              className="text-teal-600 dark:text-teal-400 hover:underline font-semibold"
             >
               جميع المراحل
             </button>
             {selectedStage && (
               <>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
+                <ChevronLeft className="w-4 h-4 text-slate-400" />
                 <button
                   onClick={() => {
                     setSelectedCourse(null);
                     setSelectedSubject(null);
                     setSelectedFolder(null);
                   }}
-                  className="text-teal-600 dark:text-teal-400 hover:underline font-medium"
+                  className="text-teal-600 dark:text-teal-400 hover:underline font-semibold"
                 >
                   {selectedStage.name}
                 </button>
@@ -161,13 +167,13 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
             )}
             {selectedCourse && (
               <>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
+                <ChevronLeft className="w-4 h-4 text-slate-400" />
                 <button
                   onClick={() => {
                     setSelectedSubject(null);
                     setSelectedFolder(null);
                   }}
-                  className="text-teal-600 dark:text-teal-400 hover:underline font-medium"
+                  className="text-teal-600 dark:text-teal-400 hover:underline font-semibold"
                 >
                   {selectedCourse.name}
                 </button>
@@ -175,10 +181,10 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
             )}
             {selectedSubject && (
               <>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
+                <ChevronLeft className="w-4 h-4 text-slate-400" />
                 <button
                   onClick={() => setSelectedFolder(null)}
-                  className="text-teal-600 dark:text-teal-400 hover:underline font-medium"
+                  className="text-teal-600 dark:text-teal-400 hover:underline font-semibold"
                 >
                   {selectedSubject.name}
                 </button>
@@ -186,8 +192,8 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
             )}
             {selectedFolder && (
               <>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
-                <span className="font-medium text-slate-700 dark:text-slate-300">
+                <ChevronLeft className="w-4 h-4 text-slate-400" />
+                <span className="font-semibold text-slate-700 dark:text-slate-300">
                   {selectedFolder.name}
                 </span>
               </>
@@ -196,16 +202,16 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
         </div>
 
         {/* عرض المراحل والاختبارات */}
-        <div className="card p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+        <div className="card p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-full min-w-0">
           {!selectedStage && (
             <>
               <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-                <Layers className="w-5 h-5 text-teal-600" /> اختر المرحلة الدراسية
+                <Layers className="w-5 h-5 text-teal-600 shrink-0" /> اختر المرحلة الدراسية
               </h2>
               {stages.length === 0 ? (
                 <EmptyState message="لا توجد مراحل دراسية متاحة حالياً." />
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
                   {stages.map((stage) => (
                     <NavItem
                       key={stage.id}
@@ -223,12 +229,12 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
           {selectedStage && !selectedCourse && (
             <>
               <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-teal-600" /> الكورسات في {selectedStage.name}
+                <BookOpen className="w-5 h-5 text-teal-600 shrink-0" /> الكورسات في {selectedStage.name}
               </h2>
               {subjectCourses.length === 0 ? (
                 <EmptyState message="لا توجد كورسات في هذه المرحلة بعد." />
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
                   {subjectCourses.map((course) => (
                     <NavItem
                       key={course.id}
@@ -246,12 +252,12 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
           {selectedCourse && !selectedSubject && (
             <>
               <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-                <ListChecks className="w-5 h-5 text-teal-600" /> المواد في {selectedCourse.name}
+                <ListChecks className="w-5 h-5 text-teal-600 shrink-0" /> المواد في {selectedCourse.name}
               </h2>
               {courseSubjects.length === 0 ? (
                 <EmptyState message="لا توجد مواد في هذا الكورس بعد." />
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
                   {courseSubjects.map((subject) => (
                     <NavItem
                       key={subject.id}
@@ -269,9 +275,9 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
           {selectedSubject && !selectedFolder && (
             <>
               <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-teal-600" /> {selectedSubject.name}
+                <FileText className="w-5 h-5 text-teal-600 shrink-0" /> {selectedSubject.name}
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
                 {subjectFolders.map((folder) => (
                   <NavItem
                     key={folder.id}
@@ -301,12 +307,12 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
           {selectedFolder && (
             <>
               <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-                <FolderOpen className="w-5 h-5 text-teal-600" /> {selectedFolder.name}
+                <FolderOpen className="w-5 h-5 text-teal-600 shrink-0" /> {selectedFolder.name}
               </h2>
               {visibleQuizzes.length === 0 ? (
                 <EmptyState message="لا توجد اختبارات في هذا المجلد بعد." />
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
                   {visibleQuizzes.map((quiz) => (
                     <NavItem
                       key={quiz.id}
@@ -323,12 +329,12 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
           )}
         </div>
 
-        {/* لوحة الصدارة - مفتوحة دائماً */}
+        {/* لوحة الشرف - مفتوحة دائماً */}
         {leaderboard?.enabled && leaderboard.students.length > 0 && (
-          <div className="card overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
+          <div className="card overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm w-full">
             <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-50 dark:bg-amber-950/40 text-amber-500 rounded-lg">
+                <div className="p-2 bg-amber-50 dark:bg-amber-950/40 text-amber-500 rounded-lg shrink-0">
                   <Trophy className="w-5 h-5" />
                 </div>
                 <div>
@@ -337,16 +343,18 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
                 </div>
               </div>
             </div>
-            <LeaderboardTable
-              students={leaderboard.students}
-              settings={leaderboard.settings}
-              currentStudentId={student.id}
-            />
+            <div className="w-full min-w-0">
+              <LeaderboardTable
+                students={leaderboard.students}
+                settings={leaderboard.settings}
+                currentStudentId={student.id}
+              />
+            </div>
           </div>
         )}
-        
+
         {/* ملخص الإحصائيات */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
           <StatCard
             icon={<Trophy className="w-5 h-5" />}
             label="النقاط"
@@ -372,10 +380,6 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomePr
             color="text-slate-600 bg-slate-100 dark:bg-slate-800"
           />
         </div>
-
-        
-
-        
       </div>
     </div>
   );
@@ -393,10 +397,10 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="stat-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-xl shadow-sm">
+    <div className="stat-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-xl shadow-sm text-right">
       <div className={`inline-flex p-2 rounded-lg ${color} mb-2`}>{icon}</div>
       <p className="text-2xl font-bold text-slate-900 dark:text-white">{value}</p>
-      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{label}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{label}</p>
     </div>
   );
 }
@@ -417,29 +421,29 @@ function NavItem({
   return (
     <button
       onClick={onClick}
-      className={`text-right p-4 rounded-xl border transition-all hover:shadow-md hover:border-teal-400 dark:hover:border-teal-500 group ${
+      className={`text-right p-4 rounded-xl border transition-all hover:shadow-md hover:border-teal-400 dark:hover:border-teal-500 group w-full ${
         isQuiz
           ? "border-teal-200 dark:border-teal-900/50 bg-teal-50/30 dark:bg-teal-950/20"
           : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
       }`}
     >
-      <div className="flex items-start gap-3 flex-row-reverse">
+      <div className="flex items-center gap-3 w-full">
         <div
-          className={`p-2 rounded-lg ${
+          className={`p-2.5 rounded-lg shrink-0 ${
             isQuiz
               ? "bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300"
               : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-          } group-hover:scale-110 transition-transform shrink-0`}
+          } group-hover:scale-105 transition-transform`}
         >
           {icon}
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">{title}</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate text-sm md:text-base">{title}</h3>
           {desc && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">{desc}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{desc}</p>
           )}
         </div>
-        <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-teal-500 transition-colors shrink-0 rotate-180" />
+        <ChevronLeft className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-teal-500 transition-colors shrink-0" />
       </div>
     </button>
   );
@@ -447,9 +451,9 @@ function NavItem({
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="text-center py-12">
-      <div className="inline-flex p-4 bg-slate-100 dark:bg-slate-800 rounded-full mb-3">
-        <FileText className="w-8 h-8 text-slate-400" />
+    <div className="text-center py-10 w-full">
+      <div className="inline-flex p-3 bg-slate-100 dark:bg-slate-800 rounded-full mb-3">
+        <FileText className="w-7 h-7 text-slate-400" />
       </div>
       <p className="text-slate-500 dark:text-slate-400 text-sm">{message}</p>
     </div>
@@ -466,7 +470,12 @@ function LeaderboardTable({
   currentStudentId: string;
 }) {
   const columns =
-    settings?.columns_config?.filter((c) => c.enabled).sort((a, b) => a.order - b.order) || [];
+    settings?.columns_config?.filter((c) => c.enabled).sort((a, b) => a.order - b.order) || [
+      { key: "rank", label: "الترتيب", enabled: true, order: 0 },
+      { key: "display_name", label: "اسم الطالب", enabled: true, order: 1 },
+      { key: "total_points", label: "النقاط", enabled: true, order: 2 },
+      { key: "total_completed_quizzes", label: "المكتملة", enabled: true, order: 3 },
+    ];
 
   const renderCell = (st: Student, key: string, rank: number) => {
     switch (key) {
@@ -496,14 +505,14 @@ function LeaderboardTable({
   };
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm text-right">
+    <div className="overflow-x-auto w-full">
+      <table className="w-full text-sm text-right border-collapse">
         <thead>
           <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800">
             {columns.map((col) => (
               <th
                 key={col.key}
-                className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300"
+                className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap"
               >
                 {col.label}
               </th>
@@ -525,7 +534,7 @@ function LeaderboardTable({
                 {columns.map((col) => (
                   <td
                     key={col.key}
-                    className={`px-4 py-3 ${
+                    className={`px-4 py-3 whitespace-nowrap ${
                       col.key === "display_name"
                         ? "text-slate-900 dark:text-slate-100"
                         : "text-slate-600 dark:text-slate-400"
