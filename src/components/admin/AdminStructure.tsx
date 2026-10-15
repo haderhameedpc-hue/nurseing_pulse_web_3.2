@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, GripVertical, ChevronRight, FolderOpen } from "lucide-react";
+import { Plus, Edit2, Trash2, GripVertical, ChevronRight, FolderOpen, Eye, EyeOff } from "lucide-react";
 import { adminApi } from "@/lib/api";
 import type { Stage, Course, Subject, Folder, Quiz } from "@/lib/api";
 import { Modal, ConfirmDialog, useToast, LoadingSpinner, EmptyState } from "./shared";
@@ -58,6 +58,16 @@ export function AdminStructure({ token }: { token: string }) {
       }
       showToast(id ? "Updated successfully" : "Created successfully");
       setEditItem(null);
+      loadAll();
+    } catch (err) {
+      showToast((err as Error).message, "error");
+    }
+  };
+
+  const handleToggleFolderVisibility = async (folder: Folder) => {
+    try {
+      await adminApi.updateFolder(token, folder.id, { is_visible: !folder.is_visible });
+      showToast(folder.is_visible ? "Folder hidden from students" : "Folder visible to students");
       loadAll();
     } catch (err) {
       showToast((err as Error).message, "error");
@@ -290,9 +300,16 @@ export function AdminStructure({ token }: { token: string }) {
           ) : (
             <div className="space-y-2">
               {childFolders.map((f) => (
-                <div key={f.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                  <FolderOpen className="w-5 h-5 text-teal-600" />
-                  <span className="flex-1 font-medium text-slate-700">{f.name}</span>
+                <div key={f.id} className={`flex items-center gap-3 p-3 bg-slate-50 rounded-lg ${f.is_visible ? "" : "opacity-50"}`}>
+                  <FolderOpen className={`w-5 h-5 ${f.is_visible ? "text-teal-600" : "text-slate-400"}`} />
+                  <span className={`flex-1 font-medium ${f.is_visible ? "text-slate-700" : "text-slate-400"}`}>{f.name}</span>
+                  <button
+                    onClick={() => handleToggleFolderVisibility(f)}
+                    className={`btn-ghost p-1.5 ${f.is_visible ? "text-teal-600" : "text-slate-400"}`}
+                    title={f.is_visible ? "Hide from students" : "Show to students"}
+                  >
+                    {f.is_visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  </button>
                   <button
                     onClick={() => setEditItem({ type: "folder", data: f })}
                     className="btn-ghost p-1.5"
