@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Shield } from "lucide-react";
 import { useStudent, useAdminToken } from "@/lib/hooks";
 import type { Student, Quiz } from "@/lib/api";
+import { Registration } from "@/components/student/Registration";
 import { Home } from "@/components/student/Home";
 import { ModeSelection, Profile, SettingsPage } from "@/components/student/Profile";
 import { QuizPlayer } from "@/components/student/QuizPlayer";
@@ -75,18 +76,13 @@ function App() {
 
   if (!student) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="text-center space-y-4">
-          <span className="w-8 h-8 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin inline-block" />
-          <p className="text-slate-500 dark:text-slate-400 text-sm">جاري التحميل...</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="btn-primary text-sm py-2 px-4"
-          >
-            إعادة المحاولة
-          </button>
-        </div>
-      </div>
+      <Registration
+        onRegistered={(s: Student) => {
+          setStudentId(s.id);
+          setStudent(s);
+          setView({ name: "home" });
+        }}
+      />
     );
   }
 
@@ -112,7 +108,6 @@ function App() {
             }}
             onOpenSettings={() => setView({ name: "settings" })}
             onSelectQuiz={(quiz) => setView({ name: "mode-select", quiz })}
-            onStudentUpdated={(updated) => setStudent(updated)}
           />
           {adminLink}
         </>
