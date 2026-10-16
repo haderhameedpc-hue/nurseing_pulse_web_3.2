@@ -12,6 +12,13 @@ export function useStudent() {
   const loadStudent = useCallback(async () => {
     const id = localStorage.getItem(STUDENT_KEY);
     if (!id) {
+      try {
+        const data = await studentApi.registerAnonymous();
+        localStorage.setItem(STUDENT_KEY, data.student.id);
+        setStudent(data.student);
+      } catch {
+        // If anonymous creation fails, proceed without student
+      }
       setLoading(false);
       return;
     }
