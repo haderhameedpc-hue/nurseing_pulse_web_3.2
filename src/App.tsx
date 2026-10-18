@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { Shield } from "lucide-react";
-import { useStudent, useAdminToken } from "@/lib/hooks";
+// import { Shield } from "lucide-react"; // تم تعطيلها لعدم الحاجة لها حالياً
+import { useStudent } from "@/lib/hooks";
+// import { useAdminToken } from "@/lib/hooks"; // معطل مؤقتاً
 import type { Student, Quiz } from "@/lib/api";
 import { Home } from "@/components/student/Home";
 import { ModeSelection, Profile, SettingsPage } from "@/components/student/Profile";
 import { QuizPlayer } from "@/components/student/QuizPlayer";
 import { QuizResult } from "@/components/student/QuizResult";
-import { AdminApp } from "@/components/admin/AdminApp";
+// import { AdminApp } from "@/components/admin/AdminApp"; // معطل مؤقتاً
 
 type View =
   | { name: "home" }
@@ -20,13 +21,29 @@ type View =
     }
   | { name: "result"; quiz: Quiz; result: any; mode: "timed" | "untimed" }
   | { name: "profile" }
-  | { name: "settings" }
-  | { name: "admin" };
+  | { name: "settings" };
+  // | { name: "admin" }; // معطل مؤقتاً
 
 function App() {
-  const { student, setStudent, setStudentId, logout, loading } = useStudent();
-  const { token, login: setAdminLoginToken, logout: adminLogout, validating } = useAdminToken();
+  // نستدعي معلومات الطالب الأساسية لتجنب تعطل المكونات، لكن سنتجاوز حالات التحميل
+  const { student, setStudent, logout } = useStudent();
   const [view, setView] = useState<View>({ name: "home" });
+
+  // إنشاء طالب وهمي (زائر) لتمريره للتطبيق فوراً وتجاوز شاشة تسجيل الدخول والتحميل
+  const currentStudent: Student = student || {
+    id: "guest_direct",
+    display_name: "طالب زائر",
+    total_points: 0,
+    total_completed_quizzes: 0,
+    created_at: new Date().toISOString()
+  };
+
+  /*
+  ===========================================================================
+    [الأكواد المعطلة: نظام الأدمن، لوحة تسجيل الدخول، وشاشات التحميل]
+    تم وضعها هنا في تعليقات لكي تستعيدها بسهولة إذا غيرت رأيك لاحقاً.
+  ===========================================================================
+  const { token, login: setAdminLoginToken, logout: adminLogout, validating } = useAdminToken();
   const [adminMode, setAdminMode] = useState(false);
 
   useEffect(() => {
@@ -54,9 +71,7 @@ function App() {
     return (
       <AdminApp
         token={token}
-        onLogin={(t) => {
-          setAdminLoginToken(t);
-        }}
+        onLogin={(t) => setAdminLoginToken(t)}
         onLogout={() => {
           adminLogout();
           setAdminMode(false);
@@ -65,6 +80,7 @@ function App() {
     );
   }
 
+  // شاشات التحميل المعطلة
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -73,6 +89,7 @@ function App() {
     );
   }
 
+  // واجهة مطالبة الطالب بتسجيل الدخول المعطلة
   if (!student) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
@@ -91,48 +108,39 @@ function App() {
   }
 
   const adminLink = (
-    <a
-      href="#admin"
-     
-      title="Admin Panel"
-    >
-    
-    </a>
+    <a href="#admin" title="Admin Panel"></a>
   );
+  ===========================================================================
+  */
 
+  // عرض الواجهات مباشرة فور فتح الرابط
   switch (view.name) {
     case "home":
       return (
-        <>
-          <Home
-            student={student}
-            onLogout={() => {
-              logout();
-              setView({ name: "home" });
-            }}
-            onOpenSettings={() => setView({ name: "settings" })}
-            onSelectQuiz={(quiz) => setView({ name: "mode-select", quiz })}
-            onStudentUpdated={(updated) => setStudent(updated)}
-          />
-          {adminLink}
-        </>
+        <Home
+          student={currentStudent}
+          onLogout={() => {
+            logout();
+            setView({ name: "home" });
+          }}
+          onOpenSettings={() => setView({ name: "settings" })}
+          onSelectQuiz={(quiz) => setView({ name: "mode-select", quiz })}
+          onStudentUpdated={(updated) => setStudent(updated)}
+        />
       );
     case "mode-select":
       return (
-        <>
-          <ModeSelection
-            quiz={view.quiz}
-            onSelectMode={(mode) => setView({ name: "quiz", quiz: view.quiz, mode })}
-            onBack={() => setView({ name: "home" })}
-          />
-          {adminLink}
-        </>
+        <ModeSelection
+          quiz={view.quiz}
+          onSelectMode={(mode) => setView({ name: "quiz", quiz: view.quiz, mode })}
+          onBack={() => setView({ name: "home" })}
+        />
       );
     case "quiz":
       return (
         <QuizPlayer
           quiz={view.quiz}
-          studentId={student.id}
+          studentId={currentStudent.id}
           mode={view.mode}
           questionIds={view.questionIds}
           isRetryWrong={view.isRetryWrong}
@@ -148,18 +156,10 @@ function App() {
           onHome={() => {
             setView({ name: "home" });
             if (!view.result.isPractice) {
-              if (student.display_name.startsWith("زائر_")) {
-                try {
-                  const current = Number(localStorage.getItem("guestPoints")) || 0;
-                  localStorage.setItem("guestPoints", String(current + (view.result.total_score || 0)));
-                } catch {
-                  // localStorage unavailable
-                }
-              }
               setStudent({
-                ...student,
-                total_points: student.total_points + (view.result.total_score || 0),
-                total_completed_quizzes: student.total_completed_quizzes + 1,
+                ...currentStudent,
+                total_points: currentStudent.total_points + (view.result.total_score || 0),
+                total_completed_quizzes: currentStudent.total_completed_quizzes + 1,
               });
             }
           }}
@@ -177,21 +177,18 @@ function App() {
       );
     case "profile":
       return (
-        <>
-          <Profile
-            studentId={student.id}
-            studentName={student.display_name}
-            onBack={() => setView({ name: "home" })}
-          />
-          {adminLink}
-        </>
+        <Profile
+          studentId={currentStudent.id}
+          studentName={currentStudent.display_name}
+          onBack={() => setView({ name: "home" })}
+        />
       );
     case "settings":
       return (
         <SettingsPage
-          studentId={student.id}
-          currentName={student.display_name}
-          onNameChanged={(newName) => setStudent({ ...student, display_name: newName })}
+          studentId={currentStudent.id}
+          currentName={currentStudent.display_name}
+          onNameChanged={(newName) => setStudent({ ...currentStudent, display_name: newName })}
           onBack={() => setView({ name: "home" })}
         />
       );
