@@ -1,21 +1,203 @@
-import { useEffect } from "react";
-import MainApp from "./components/MainApp";
+import { useState, useEffect } from "react";
+import { Shield } from "lucide-react";
+import { useStudent, useAdminToken } from "@/lib/hooks";
+import type { Student, Quiz } from "@/lib/api";
+import { Home } from "@/components/student/Home";
+import { ModeSelection, Profile, SettingsPage } from "@/components/student/Profile";
+import { QuizPlayer } from "@/components/student/QuizPlayer";
+import { QuizResult } from "@/components/student/QuizResult";
+import { AdminApp } from "@/components/admin/AdminApp";
 
-// تم وضع استيراد شاشة التحميل كتعليق إذا أردت إرجاعها مستقبلاً
-// import WelcomePage from "./components/WelcomePage";
+type View =
+  | { name: "home" }
+  | { name: "mode-select"; quiz: Quiz }
+  | {
+      name: "quiz";
+      quiz: Quiz;
+      mode: "timed" | "untimed";
+      questionIds?: string[];
+      isRetryWrong?: boolean;
+    }
+  | { name: "result"; quiz: Quiz; result: any; mode: "timed" | "untimed" }
+  | { name: "profile" }
+  | { name: "settings" }
+  | { name: "admin" };
 
-export default function App() {
+function App() {
+  const { student, setStudent, setStudentId, logout, loading } = useStudent();
+  const { token, login: setAdminLoginToken, logout: adminLogout, validating } = useAdminToken();
+  const [view, setView] = useState<View>({ name: "home" });
+  const [adminMode, setAdminMode] = useState(false);
+
   useEffect(() => {
-    // تفعيل الوضع الداكن في جذور الموقع فور التحميل
-    document.documentElement.classList.add('dark');
+    if (window.location.hash === "#admin") {
+      setAdminMode(true);
+    }
   }, []);
 
-  return (
-    /* أضفنا dark:bg-gray-950 لضمان سواد الخلفية منذ اللحظة الأولى */
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
-      {/* تم إزالة شاشة التحميل (WelcomePage) نهائياً من هنا */}
-      {/* الدخول مباشرة إلى المكون الرئيسي الذي يحتوي على الاختبار التفاعلي */}
-      <MainApp />
-    </div>
+  useEffect(() => {
+    const onHashChange = () => {
+      setAdminMode(window.location.hash === "#admin");
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  if (adminMode) {
+    if (validating) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-900">
+          <span className="w-8 h-8 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
+        </div>
+      );
+    }
+    return (
+      <AdminApp
+        token={token}
+        onLogin={(t) => {
+          setAdminLoginToken(t);
+        }}
+        onLogout={() => {
+          adminLogout();
+          setAdminMode(false);
+        }}
+      />
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="w-8 h-8 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!student) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="text-center space-y-4">
+          <span className="w-8 h-8 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin inline-block" />
+          <p className="text-slate-500 dark:text-slate-400 text-sm">جاري التحميل...</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="btn-primary text-sm py-2 px-4"
+          >
+            إعادة المحاولة
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const adminLink = (
+    <a
+      href="#admin"
+     
+      title="Admin Panel"
+    >
+    
+    </a>
   );
+
+  switch (view.name) {
+    case "home":
+      return (
+        <>
+          <Home
+            student={student}
+            onLogout={() => {
+              logout();
+              setView({ name: "home" });
+            }}
+            onOpenSettings={() => setView({ name: "settings" })}
+            onSelectQuiz={(quiz) => setView({ name: "mode-select", quiz })}
+            onStudentUpdated={(updated) => setStudent(updated)}
+          />
+          {adminLink}
+        </>
+      );
+    case "mode-select":
+      return (
+        <>
+          <ModeSelection
+            quiz={view.quiz}
+            onSelectMode={(mode) => setView({ name: "quiz", quiz: view.quiz, mode })}
+            onBack={() => setView({ name: "home" })}
+          />
+          {adminLink}
+        </>
+      );
+    case "quiz":
+      return (
+        <QuizPlayer
+          quiz={view.quiz}
+          studentId={student.id}
+          mode={view.mode}
+          questionIds={view.questionIds}
+          isRetryWrong={view.isRetryWrong}
+          onComplete={(result) => setView({ name: "result", quiz: view.quiz, result, mode: view.mode })}
+          onExit={() => setView({ name: "home" })}
+        />
+      );
+    case "result":
+      return (
+        <QuizResult
+          quiz={view.quiz}
+          result={view.result}
+          onHome={() => {
+            setView({ name: "home" });
+            if (!view.result.isPractice) {
+              if (student.display_name.startsWith("زائر_")) {
+                try {
+                  const current = Number(localStorage.getItem("guestPoints")) || 0;
+                  localStorage.setItem("guestPoints", String(current + (view.result.total_score || 0)));
+                } catch {
+                  // localStorage unavailable
+                }
+              }
+              setStudent({
+                ...student,
+                total_points: student.total_points + (view.result.total_score || 0),
+                total_completed_quizzes: student.total_completed_quizzes + 1,
+              });
+            }
+          }}
+          onRetry={() => setView({ name: "mode-select", quiz: view.quiz })}
+          onRetryWrong={(wrongIds) =>
+            setView({
+              name: "quiz",
+              quiz: view.quiz,
+              mode: view.mode,
+              questionIds: wrongIds,
+              isRetryWrong: true,
+            })
+          }
+        />
+      );
+    case "profile":
+      return (
+        <>
+          <Profile
+            studentId={student.id}
+            studentName={student.display_name}
+            onBack={() => setView({ name: "home" })}
+          />
+          {adminLink}
+        </>
+      );
+    case "settings":
+      return (
+        <SettingsPage
+          studentId={student.id}
+          currentName={student.display_name}
+          onNameChanged={(newName) => setStudent({ ...student, display_name: newName })}
+          onBack={() => setView({ name: "home" })}
+        />
+      );
+    default:
+      return null;
+  }
 }
+
+export default App;
