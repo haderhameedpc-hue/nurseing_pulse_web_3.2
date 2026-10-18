@@ -148,6 +148,14 @@ function App() {
           onHome={() => {
             setView({ name: "home" });
             if (!view.result.isPractice) {
+              if (student.display_name.startsWith("زائر_")) {
+                try {
+                  const current = Number(localStorage.getItem("guestPoints")) || 0;
+                  localStorage.setItem("guestPoints", String(current + (view.result.total_score || 0)));
+                } catch {
+                  // localStorage unavailable
+                }
+              }
               setStudent({
                 ...student,
                 total_points: student.total_points + (view.result.total_score || 0),
