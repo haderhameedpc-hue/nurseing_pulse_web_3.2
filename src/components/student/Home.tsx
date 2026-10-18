@@ -107,13 +107,6 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz, onStuden
           </div>
           <div className="flex items-center gap-0">
             {isAnonymous && (
-              <button
-                onClick={() => setShowJoinModal(true)}
-                className="btn-ghost flex items-center justify-center p-2 rounded-lg text-teal-600 dark:text-teal-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xs font-semibold px-3"
-                title="انضم للوحة الصدارة"
-              >
-                انضم للوحة الصدارة
-              </button>
             )}
             <a
               href="https://t.me/H_98da"
