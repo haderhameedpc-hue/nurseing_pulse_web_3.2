@@ -32,6 +32,16 @@ Deno.serve(async (req: Request) => {
     const path = url.pathname.replace(/^\/quiz-api/, "");
     const body = req.method !== "GET" ? await req.json().catch(() => ({})) : {};
 
+    // ─── REGISTER ANONYMOUS ──────────────────────────────
+    if (path === "/register-anonymous" && req.method === "POST") {
+      const anonName = `زائر_${crypto.randomUUID().split("-")[0]}`;
+      const { data, error } = await supabase.from("students").insert({
+        display_name: anonName,
+      }).select().single();
+      if (error) return json({ error: error.message }, 500);
+      return json({ student: data });
+    }
+
     // ─── REGISTER ────────────────────────────────────────
     if (path === "/register" && req.method === "POST") {
       const { display_name } = body;
