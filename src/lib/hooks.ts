@@ -1,15 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Student } from "@/lib/api";
 import { studentApi, adminApi } from "@/lib/api";
-import { supabase } from "@/lib/supabase";
 
 const STUDENT_KEY = "quiz_student_id";
 const ADMIN_TOKEN_KEY = "quiz_admin_token";
-
-function generateAnonName(): string {
-  const random = Math.random().toString(36).substring(2, 10);
-  return `زائر_${random}`;
-}
 
 export function useStudent() {
   const [student, setStudent] = useState<Student | null>(null);
@@ -18,20 +12,6 @@ export function useStudent() {
   const loadStudent = useCallback(async () => {
     const id = localStorage.getItem(STUDENT_KEY);
     if (!id) {
-      try {
-        const { data: newStudent, error } = await supabase
-          .from("students")
-          .insert({ display_name: generateAnonName() })
-          .select()
-          .single();
-        if (error) throw error;
-        if (newStudent) {
-          localStorage.setItem(STUDENT_KEY, newStudent.id);
-          setStudent(newStudent);
-        }
-      } catch {
-        // If anonymous creation fails, still let user proceed
-      }
       setLoading(false);
       return;
     }

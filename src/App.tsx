@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Shield } from "lucide-react";
+import { useStudent, useAdminToken } from "@/lib/hooks";
 import type { Student, Quiz } from "@/lib/api";
+import { Registration } from "@/components/student/Registration";
 import { Home } from "@/components/student/Home";
 import { ModeSelection, Profile, SettingsPage } from "@/components/student/Profile";
 import { QuizPlayer } from "@/components/student/QuizPlayer";
 import { QuizResult } from "@/components/student/QuizResult";
+import { AdminApp } from "@/components/admin/AdminApp";
 
 type View =
   | { name: "home" }
@@ -17,44 +21,113 @@ type View =
     }
   | { name: "result"; quiz: Quiz; result: any; mode: "timed" | "untimed" }
   | { name: "profile" }
-  | { name: "settings" };
+  | { name: "settings" }
+  | { name: "admin" };
 
 function App() {
+  const { student, setStudent, setStudentId, logout, loading } = useStudent();
+  const { token, login: setAdminLoginToken, logout: adminLogout, validating } = useAdminToken();
   const [view, setView] = useState<View>({ name: "home" });
+  const [adminMode, setAdminMode] = useState(false);
 
-  // حل مشكلة الشاشة البيضاء: توفير حساب زائر بمعرف UUID حقيقي شكلياً لتجنب أعطال قاعدة البيانات
-  const mockStudent: Student = {
-    id: "00000000-0000-0000-0000-000000000000", 
-    display_name: "مشارك",
-    total_points: 0,
-    total_completed_quizzes: 0,
-    created_at: new Date().toISOString()
-  };
+  useEffect(() => {
+    if (window.location.hash === "#admin") {
+      setAdminMode(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      setAdminMode(window.location.hash === "#admin");
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  if (adminMode) {
+    if (validating) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-900">
+          <span className="w-8 h-8 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
+        </div>
+      );
+    }
+    return (
+      <AdminApp
+        token={token}
+        onLogin={(t) => {
+          setAdminLoginToken(t);
+        }}
+        onLogout={() => {
+          adminLogout();
+          setAdminMode(false);
+        }}
+      />
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <span className="w-8 h-8 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!student) {
+    return (
+      <Registration
+        onRegistered={(s: Student) => {
+          setStudentId(s.id);
+          setStudent(s);
+          setView({ name: "home" });
+        }}
+      />
+    );
+  }
+
+  const adminLink = (
+    <a
+      href="#admin"
+     
+      title="Admin Panel"
+    >
+    
+    </a>
+  );
 
   switch (view.name) {
     case "home":
       return (
-        <Home
-          student={mockStudent}
-          onLogout={() => {}} // معطل
-          onOpenSettings={() => setView({ name: "settings" })}
-          onSelectQuiz={(quiz) => setView({ name: "mode-select", quiz })}
-          onStudentUpdated={() => {}} // معطل
-        />
+        <>
+          <Home
+            student={student}
+            onLogout={() => {
+              logout();
+              setView({ name: "home" });
+            }}
+            onOpenSettings={() => setView({ name: "settings" })}
+            onSelectQuiz={(quiz) => setView({ name: "mode-select", quiz })}
+          />
+          {adminLink}
+        </>
       );
     case "mode-select":
       return (
-        <ModeSelection
-          quiz={view.quiz}
-          onSelectMode={(mode) => setView({ name: "quiz", quiz: view.quiz, mode })}
-          onBack={() => setView({ name: "home" })}
-        />
+        <>
+          <ModeSelection
+            quiz={view.quiz}
+            onSelectMode={(mode) => setView({ name: "quiz", quiz: view.quiz, mode })}
+            onBack={() => setView({ name: "home" })}
+          />
+          {adminLink}
+        </>
       );
     case "quiz":
       return (
         <QuizPlayer
           quiz={view.quiz}
-          studentId={mockStudent.id}
+          studentId={student.id}
           mode={view.mode}
           questionIds={view.questionIds}
           isRetryWrong={view.isRetryWrong}
@@ -67,7 +140,16 @@ function App() {
         <QuizResult
           quiz={view.quiz}
           result={view.result}
-          onHome={() => setView({ name: "home" })}
+          onHome={() => {
+            setView({ name: "home" });
+            if (!view.result.isPractice) {
+              setStudent({
+                ...student,
+                total_points: student.total_points + (view.result.total_score || 0),
+                total_completed_quizzes: student.total_completed_quizzes + 1,
+              });
+            }
+          }}
           onRetry={() => setView({ name: "mode-select", quiz: view.quiz })}
           onRetryWrong={(wrongIds) =>
             setView({
@@ -82,18 +164,21 @@ function App() {
       );
     case "profile":
       return (
-        <Profile
-          studentId={mockStudent.id}
-          studentName={mockStudent.display_name}
-          onBack={() => setView({ name: "home" })}
-        />
+        <>
+          <Profile
+            studentId={student.id}
+            studentName={student.display_name}
+            onBack={() => setView({ name: "home" })}
+          />
+          {adminLink}
+        </>
       );
     case "settings":
       return (
         <SettingsPage
-          studentId={mockStudent.id}
-          currentName={mockStudent.display_name}
-          onNameChanged={() => {}}
+          studentId={student.id}
+          currentName={student.display_name}
+          onNameChanged={(newName) => setStudent({ ...student, display_name: newName })}
           onBack={() => setView({ name: "home" })}
         />
       );
@@ -103,17 +188,3 @@ function App() {
 }
 
 export default App;
-
-/*
-===========================================================================
-  [الأكواد الأصلية المعطلة]
-  لقد وضعت كود الأدمن وتسجيل الطلاب أسفل الصفحة داخل تعليق، لكي يكون
-  بعيداً عن طريقك الآن ولكن محفوظاً إذا قررت استرجاعه لاحقاً.
-===========================================================================
-import { useEffect } from "react";
-import { useStudent, useAdminToken } from "@/lib/hooks";
-import { AdminApp } from "@/components/admin/AdminApp";
-import { Shield } from "lucide-react";
-
-// (كودات تسجيل الدخول والتحميل كانت هنا)
-*/

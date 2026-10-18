@@ -187,10 +187,6 @@ async function apiCall(endpoint: string, options: RequestInit = {}, token?: stri
 export const studentApi = {
   register: (display_name: string) =>
     apiCall("/quiz-api/register", { method: "POST", body: JSON.stringify({ display_name }) }),
-  registerAnonymous: () =>
-    apiCall("/quiz-api/register-anonymous", { method: "POST" }),
-  joinLeaderboard: (student_id: string, display_name: string) =>
-    apiCall("/quiz-api/change-name", { method: "POST", body: JSON.stringify({ student_id, new_name: display_name }) }),
   login: (display_name: string) =>
     apiCall("/quiz-api/login", { method: "POST", body: JSON.stringify({ display_name }) }),
   getStudent: (id: string) =>

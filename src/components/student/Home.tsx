@@ -15,9 +15,6 @@ import {
   Shield,
   GraduationCap,
   Send,
-  X,
-  Info,
-  ArrowRight,
 } from "lucide-react";
 import type { Student, Stage, Course, Subject, Folder, Quiz, LeaderboardSettings } from "@/lib/api";
 import { studentApi } from "@/lib/api";
@@ -28,10 +25,9 @@ interface HomeProps {
   onLogout: () => void;
   onOpenSettings: () => void;
   onSelectQuiz: (quiz: Quiz) => void;
-  onStudentUpdated: (student: Student) => void;
 }
 
-export function Home({ student, onLogout, onOpenSettings, onSelectQuiz, onStudentUpdated }: HomeProps) {
+export function Home({ student, onLogout, onOpenSettings, onSelectQuiz }: HomeProps) {
   const [stages, setStages] = useState<Stage[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -47,9 +43,6 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz, onStuden
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
-  const [showJoinModal, setShowJoinModal] = useState(false);
-
-  const isAnonymous = student.display_name.startsWith("زائر_");
 
   useEffect(() => {
     Promise.all([studentApi.getStructure(), studentApi.getLeaderboard()])
@@ -106,15 +99,6 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz, onStuden
             </div>
           </div>
           <div className="flex items-center gap-0">
-            {isAnonymous && (
-              <button
-                onClick={() => setShowJoinModal(true)}
-                className="btn-ghost flex items-center justify-center p-2 rounded-lg text-teal-600 dark:text-teal-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xs font-semibold px-3"
-                title="انضم للوحة الصدارة"
-              >
-                انضم للوحة الصدارة
-              </button>
-            )}
             <a
               href="https://t.me/H_98da"
               target="_blank"
@@ -397,18 +381,6 @@ export function Home({ student, onLogout, onOpenSettings, onSelectQuiz, onStuden
           />
         </div>
       </div>
-
-      {/* Join Leaderboard Modal */}
-      {showJoinModal && (
-        <JoinLeaderboardModal
-          student={student}
-          onClose={() => setShowJoinModal(false)}
-          onSuccess={(updated) => {
-            onStudentUpdated(updated);
-            setShowJoinModal(false);
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -603,131 +575,6 @@ function LeaderboardTable({
           })}
         </tbody>
       </table>
-    </div>
-  );
-}
-
-function normalizeStudentName(input: string): string {
-  let cleaned = input.trim();
-  cleaned = cleaned.replace(/[٠-٩]/g, (d) => "0123456789"["٠١٢٣٤٥٦٧٨٩".indexOf(d)]);
-  cleaned = cleaned.replace(/\s+(\d{2})$/, "$1");
-  return cleaned;
-}
-
-function JoinLeaderboardModal({
-  student,
-  onClose,
-  onSuccess,
-}: {
-  student: Student;
-  onClose: () => void;
-  onSuccess: (updated: Student) => void;
-}) {
-  const [name, setName] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    if (!name.trim()) {
-      setError("يرجى كتابة الاسم أولاً.");
-      return;
-    }
-
-    const standardName = normalizeStudentName(name);
-
-    const endsWithTwoDigits = /\d{2}$/.test(standardName);
-    const endsWithThreeDigits = /\d{3}$/.test(standardName);
-
-    if (!endsWithTwoDigits || endsWithThreeDigits) {
-      setError("يجب أن ينتهي الاسم برقمين فقط (مثال: أحمد علي12)");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const data = await studentApi.joinLeaderboard(student.id, standardName);
-      if (data.error) {
-        setError(data.error);
-        return;
-      }
-      onSuccess({ ...student, display_name: standardName });
-    } catch (err: any) {
-      setError(err.message || "حدث خطأ أثناء معالجة الحساب.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 animate-fadeIn" onClick={onClose}>
-      <div
-        className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-8"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          onClick={onClose}
-          className="absolute top-4 left-4 text-slate-400 hover:text-white transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-800 rounded-2xl mb-4 border border-slate-700">
-            <Trophy className="w-8 h-8 text-teal-400" />
-          </div>
-          <h2 className="text-2xl font-bold text-white mb-1">انضم للوحة الصدارة</h2>
-          <p className="text-slate-400 text-sm">سجل اسمك لتظهر نقاطك في لوحة الشرف</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              اسم الطالب
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="مثال: أحمد علي12"
-              className="w-full px-4 py-3 rounded-lg border border-slate-700 bg-slate-950 text-white placeholder-slate-500 focus:ring-2 focus:ring-teal-500 outline-none transition-shadow text-center text-lg"
-              autoFocus
-            />
-          </div>
-
-          <div className="flex items-start gap-2.5 p-3.5 bg-slate-950/80 rounded-lg border border-slate-800">
-            <Info className="w-5 h-5 text-teal-400 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-slate-400 leading-relaxed text-right">
-              اكتب اسمك متبوعاً برقمين في النهاية (مثل: <strong>أحمد علي12</strong>).
-              ستظل كل نقاطك ومحاولاتك محفوظة ومرتبطة باسمك.
-            </p>
-          </div>
-
-          {error && (
-            <div className="p-3 bg-red-950/40 rounded-lg border border-red-800/50">
-              <p className="text-sm text-red-300 text-center">{error}</p>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary w-full py-3 flex items-center justify-center gap-2 text-base font-semibold shadow-lg"
-          >
-            {loading ? (
-              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <>
-                <span>متابعة ودخول</span>
-                <ArrowRight className="w-5 h-5" />
-              </>
-            )}
-          </button>
-        </form>
-      </div>
     </div>
   );
 }
